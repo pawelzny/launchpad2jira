@@ -25,9 +25,34 @@ def translate_status(status):
     return mapping[status.title()]
 
 
-def create_issue(task, bug):
-    # TODO: attachments
+def create_attachment(bug):
+    for attachment in bug.attachments:
+        f_in = attachment.data.open()
+        filename = os.path.normpath('%s/%s_%s' % (config['local']['attachments'],
+                                                  bug.id, f_in.filename))
 
+        if os.path.exists(filename):
+            logging.info('Attachment %s_%s already exists, '
+                         'skipping: %s' % (bug.id, f_in.filename, filename))
+        else:
+            with open(filename, 'wb') as f_out:
+                while True:
+                    buff = f_in.read(1024)
+                    if buff:
+                        f_out.write(buff)
+                    else:
+                        break
+            logging.info('Attachment %s_%s export success' % (bug.id, f_in.filename))
+
+        return {
+            'name': f_in.filename,
+            'attacher': attachment.message.owner.display_name,
+            'created': attachment.message.date_created.isoformat(),
+            'uri': '%s/%s' % (config['jira']['attachments_url'].rstrip('/'), f_in.filename)
+        }
+
+
+def create_issue(task, bug):
     issue = {
         'externalId': str(bug.id),
         'status': translate_status(task.status),
@@ -38,14 +63,15 @@ def create_issue(task, bug):
         'priority': task.importance,
         'labels': bug.tags,
         'issueType': 'Bug',
-        'created': str(task.date_created.isoformat()),
-        'updated': str(bug.date_last_updated.isoformat()),
+        'created': task.date_created.isoformat(),
+        'updated': bug.date_last_updated.isoformat(),
         'comments': [{'body': c.content,
-                      'created': str(c.date_created.isoformat()),
+                      'created': c.date_created.isoformat(),
                       'author': get_username(c.owner_link)}
                      for c in bug.messages],
         'history': [],  # TODO: activities
-        'affectedVersions': []
+        'affectedVersions': [],
+        'attachments': create_attachment(bug)
     }
     sub_tasks = []
     links = []
@@ -64,7 +90,7 @@ def create_issue(task, bug):
                 'assignee': task.assignee.display_name,
                 'summary': 'Nominated for series: %s' % version,
                 'issueType': 'Sub-task',
-                'created': str(activity.datechanged.isoformat())
+                'created': activity.datechanged.isoformat()
             }
             sub_tasks.append(sub_task)
 

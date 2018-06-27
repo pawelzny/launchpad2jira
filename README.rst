@@ -14,7 +14,6 @@ TODO
 
 **Warning! Work in progress. Few things are still missing.**
 
-* Export issue attachments
 * Export issue history (activities)
 
 
@@ -56,6 +55,9 @@ The most important configuration you have to change are:
 
     # To which groups users will be assigned to [optional]
     groups =
+
+    # URL to server where exported attachments are visible to JIRA instance
+    attachments_url = http://localhost/attachments/
 
 
 You don't need to change anything in other sections.
