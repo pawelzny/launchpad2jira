@@ -96,8 +96,11 @@ def export_issues():
                           'Private', 'Proprietary', 'Embargoed'])
 
     counter = 0
-    for task in tqdm(bug_tasks[:2], desc='Export issues'):  # TODO: remove slice
+    for task in tqdm(bug_tasks[:20], desc='Export issues'):  # TODO: remove slice
         bug = task.bug
+
+        for activity in bug.activity:
+            create_user(clean_id(activity.person_link), [])
 
         filename = os.path.normpath('%s/%s_issue.json' % (config['local']['issues'], bug.id))
         if os.path.exists(filename):
@@ -123,6 +126,41 @@ def export_issues():
     logging.info('Exported issues: %s/%s' % (counter, len(bug_tasks)))
 
 
+def create_user(username, groups):
+    filename = os.path.normpath('%s/%s_user.json' % (config['local']['users'], username))
+    if os.path.exists(filename):
+        logging.info('User %s already exists, skipping: %s' % (username, filename))
+        return True
+
+    try:
+        lp_user = lp.people[username]
+    except Exception as e:
+        logging.error('User %s export failed' % username)
+        logging.exception(e)
+        return False
+    else:
+        email = None
+        if not lp_user.hide_email_addresses and lp_user.preferred_email_address:
+            email = lp_user.preferred_email_address.email
+
+        user = {
+            'name': username,
+            'fullname': lp_user.display_name,
+            'active': True,
+        }
+
+        if groups:
+            user['groups'] = groups
+        if email:
+            user['email'] = email
+
+        with open(filename, 'wb') as f:
+            json.dump(user, f)
+
+        logging.info('User %s export success' % username)
+        return True
+
+
 def export_users():
     logging.info('===== Export: Users =====')
 
@@ -134,42 +172,10 @@ def export_users():
     subscriptions = project.getSubscriptions()
 
     counter = 0
-    for sub in tqdm(subscriptions, desc='Export users'):  # TODO: remove slice
+    for sub in tqdm(subscriptions, desc='Export users'):
         username = clean_id(sub.subscriber_link)
-
-        filename = os.path.normpath('%s/%s_user.json' % (config['local']['users'], username))
-        if os.path.exists(filename):
+        if create_user(username, groups):
             counter += 1
-            logging.info('User %s already exists, skipping: %s' % (username, filename))
-            continue
-
-        try:
-            lp_user = lp.people[username]
-        except Exception as e:
-            logging.error('User %s export failed' % username)
-            logging.exception(e)
-            continue
-        else:
-            counter += 1
-            email = None
-            if not lp_user.hide_email_addresses and lp_user.preferred_email_address:
-                email = lp_user.preferred_email_address.email
-
-            user = {
-                'name': username,
-                'fullname': lp_user.display_name,
-                'active': True,
-            }
-
-            if groups:
-                user['groups'] = groups
-            if email:
-                user['email'] = email
-
-            with open(filename, 'wb') as f:
-                json.dump(user, f)
-
-            logging.info('User %s export success' % username)
     logging.info('Exported users: %s/%s' % (counter, len(subscriptions)))
 
 
