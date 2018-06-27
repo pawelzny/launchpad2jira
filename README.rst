@@ -2,8 +2,20 @@
 Launchpad to JIRA export
 ========================
 
+:Info: Export users and issues from Launchpad project to JIRA.
+:Author: Paweł Zadrożny @pawelzny <pawel.zny@gmail.com>
+
 This little command line script allow to export all Issues and Users
 from launchpad to JSON file which is compatible with default JIRA's import plugin.
+
+
+TODO
+====
+
+**Warning! Work in progress. Few things are still missing.**
+
+* Export issue attachments
+* Export issue history (activities)
 
 
 Installation
@@ -21,23 +33,37 @@ All required libraries will be installed in to your system or virtualenv.
 Configuration
 =============
 
-1. Edit `export.conf` file in sections: **launchpad** and **jira**.
+Configuration required to edit config and mapping files.
 
+Export.conf
+-----------
+
+Edit `export.conf` file.
 The most important configuration you have to change are:
 
-.. code-block::
+.. code-block:: ini
 
-    launchpad:project - name of existing project on launchpad
+    [launchpad]
+    # Project short name on Launchpad [required]
+    project =
 
-    jira:project      - name of project on jira
-    jira:key          - project's key on jira
-    jira:groups       - groups for exported users
+    [jira]
+    # Project name on JIRA [required]
+    project =
+
+    # Project key on JIRA [required]
+    key =
+
+    # To which groups users will be assigned to [optional]
+    groups =
 
 
 You don't need to change anything in other sections.
 
-2. Edit `lp2_jira_issue_map.json` file.
+Issue status mapping
+--------------------
 
+Edit `lp2_jira_issue_map.json` file.
 This file provides mapping between issues statuses from Launchpad to JIRA.
 All *keys* are statuses from Launchpad, and *values* are statuses from JIRA.
 
@@ -55,8 +81,8 @@ Execute `LaunchpadExport.py` file.
 
 Two directories will be created
 
-* .lplib_cache - used by launchpad library
-* <launchpad:project>_export - used to save exported files
+* `.lplib_cache` - used by launchpad library
+* `<launchpad:project>_export` - used to save exported files
 
 Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_export.json`.
 
