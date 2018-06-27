@@ -1,0 +1,15 @@
+{
+  "New": "Open",
+  "Opinion": "Open",
+  "Confirmed": "In Progress",
+  "In Progress": "In Progress",
+  "Triaged": "In Progress",
+  "Incomplete": "In Progress",
+  "Incomplete (with response)": "In Progress",
+  "Incomplete (without response)": "In Progress",
+  "Fix Committed": "Resolved",
+  "Fix Released": "Resolved",
+  "Expired": "Closed",
+  "Won't Fix": "Closed",
+  "Invalid": "Closed"
+}
