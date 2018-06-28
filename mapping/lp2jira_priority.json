@@ -4,5 +4,6 @@
   "Medium": "High",
   "Low": "Medium",
   "Wishlist": "Low",
-  "Undecided": "Lowest"
+  "Undecided": "Lowest",
+  "Undefined": "Lowest"
 }

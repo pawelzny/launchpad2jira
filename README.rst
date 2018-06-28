@@ -15,9 +15,7 @@ TODO
 **Warning! Work in progress. Few things are still missing.**
 
 * Export issue history (activities)
-* Export blueprints
 * Support for custom fields
-* Export components
 
 
 Installation
@@ -107,18 +105,23 @@ History
 
 **2018-06-28 [dev]:**
 
-* Export issues (bugs)
+* **Export issues (bugs)**
     * comments
     * attachments
     * status mapping
     * priority mapping
     * sub-tasks based on affected branches
-* Export releases
-* Export users
+* **Export blueprints**
+    * status mapping
+    * priority mapping
+    * reporter and assignee
+    * description, whiteboard, work items
+* **Export users**
     * subscribed to project
     * commenter
     * assignee
     * reporter
+* **Export releases**
 
 
 LICENSE

@@ -3,8 +3,11 @@
 import json
 import logging
 import os
+import re
 
 import configparser
+import requests
+from bs4 import BeautifulSoup
 from launchpadlib.launchpad import Launchpad
 from tqdm import tqdm
 
@@ -146,7 +149,7 @@ def export_issues():
     export_bug['projects'][0]['versions'] = get_releases(project)
 
     counter = 0
-    for task in tqdm(bug_tasks[:20], desc='Export issues'):  # TODO: remove slice
+    for task in tqdm(bug_tasks, desc='Export issues'):
         bug = task.bug
 
         for activity in bug.activity:
@@ -251,10 +254,69 @@ def compile_export_file():
     logging.info('Exported data saved in: %s' % filename)
 
 
+def export_blueprints():
+    logging.info('===== Export: Blueprints =====')
+    project = lp.projects[config['launchpad']['project']]
+
+    url = 'https://blueprints.launchpad.net/%s/+specs?show=all' % config['launchpad']['project']
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, 'html.parser')
+
+    specs = soup.find_all(href=lambda x: x and re.compile('\+spec/').search(x))
+    counter = 0
+    for a in tqdm(specs, desc='Export blueprints'):
+        name = a.get('href').split('/')[-1]
+
+        try:
+            spec = project.getSpecification(name=name)
+            create_user(clean_id(spec.owner.name))
+            if spec.assignee:
+                create_user(clean_id(spec.assignee.name))
+        except Exception as e:
+            logging.exception(e)
+            continue
+
+        filename = os.path.normpath('%s/%s_blueprint.json' % (config['local']['issues'], name))
+        if os.path.exists(filename):
+            counter += 1
+            logging.info('Blueprint %s already exists, skipping: %s' % (name, filename))
+            continue
+
+        if spec.is_complete:
+            status = translate_status('Fix Released')
+        elif spec.is_started and not spec.is_complete:
+            status = translate_status('In Progress')
+        else:
+            status = translate_status('New')
+
+        issue = {
+            'externalId': name,
+            'status': status,
+            'reporter': spec.owner.display_name,
+            'summary': spec.title,
+            'description': '%s\n\n%s\n\n%s' % (spec.summary, spec.whiteboard, spec.workitems_text),
+            'priority': translate_priority(spec.priority),
+            'issueType': 'Story',
+            'created': spec.date_created.isoformat(),
+        }
+        if spec.assignee:
+            issue['assignee'] = spec.assignee.display_name
+
+        export_bug['projects'][0]['issues'] = [issue]
+        export_bug['links'] = []
+        with open(filename, 'wb') as f:
+            json.dump(export_bug, f)
+        counter += 1
+
+        logging.info('Blueprint %s export success' % name)
+    logging.info('Exported blueprints: %s/%s' % (counter, len(specs)))
+
+
 def main():
     logging.info('===== Export start =====')
     export_users()
     export_issues()
+    export_blueprints()
     compile_export_file()
     logging.info('===== Export complete =====')
 
@@ -268,7 +330,8 @@ if __name__ == '__main__':
                         level=config['logging']['level'])
 
     lp = Launchpad.login_with('LP2JIRA', config['launchpad']['service'],
-                              launchpadlib_dir=config['launchpad']['cache_dir'])
+                              launchpadlib_dir=config['launchpad']['cache_dir'],
+                              version='devel')
     user_groups = []
     if config['jira']['groups']:
         user_groups = [g.strip() for g in config['jira']['groups'].split(',')]
