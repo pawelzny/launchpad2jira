@@ -15,6 +15,9 @@ TODO
 **Warning! Work in progress. Few things are still missing.**
 
 * Export issue history (activities)
+* Export blueprints
+* Support for custom fields
+* Export components
 
 
 Installation
@@ -65,12 +68,22 @@ You don't need to change anything in other sections.
 Issue status mapping
 --------------------
 
-Edit `lp2_jira_issue_map.json` file.
+Edit `mapping/lp2jira_issue.json` file.
 This file provides mapping between issues statuses from Launchpad to JIRA.
 All *keys* are statuses from Launchpad, and *values* are statuses from JIRA.
 
-Values must match exactly statuses from JIRA workflow.
+Values must be exact names of statuses from JIRA.
+You can check on http://<my-jira.com>/secure/admin/ViewStatuses.jspa
 
+Importance to priority mapping
+------------------------------
+
+Edit `mapping/lp2jira_priority.json` file.
+This file provides mapping between Launchpad importance and JIRA priority
+status. All *keys* are statuses from Launchpad, and *values* are statuses from JIRA.
+
+Values must be exact names of priorities from JIRA.
+You can check on http://<my-jira.com>/secure/admin/ViewPriorities.jspa
 
 Run Export
 ==========
@@ -87,6 +100,25 @@ Two directories will be created
 * `<launchpad:project>_export` - used to save exported files
 
 Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_export.json`.
+
+
+History
+=======
+
+**2018-06-28 [dev]:**
+
+* Export issues (bugs)
+    * comments
+    * attachments
+    * status mapping
+    * priority mapping
+    * sub-tasks based on affected branches
+* Export releases
+* Export users
+    * subscribed to project
+    * commenter
+    * assignee
+    * reporter
 
 
 LICENSE

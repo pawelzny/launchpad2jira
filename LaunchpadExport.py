@@ -20,12 +20,19 @@ def clean_id(item_id):
 
 
 def translate_status(status):
-    with open(config['jira']['mapping'], 'r') as f:
+    with open(config['mapping']['issue'], 'r') as f:
         mapping = json.load(f)
     return mapping[status.title()]
 
 
-def create_attachment(bug):
+def translate_priority(priority):
+    with open(config['mapping']['priority'], 'r') as f:
+        mapping = json.load(f)
+    return mapping[priority.title()]
+
+
+def create_attachments(bug):
+    attachments = []
     for attachment in bug.attachments:
         f_in = attachment.data.open()
         filename = os.path.normpath('%s/%s_%s' % (config['local']['attachments'],
@@ -43,13 +50,13 @@ def create_attachment(bug):
                     else:
                         break
             logging.info('Attachment %s_%s export success' % (bug.id, f_in.filename))
-
-        return {
-            'name': f_in.filename,
-            'attacher': attachment.message.owner.display_name,
-            'created': attachment.message.date_created.isoformat(),
-            'uri': '%s/%s' % (config['jira']['attachments_url'].rstrip('/'), f_in.filename)
-        }
+            attachments.append({
+                'name': f_in.filename,
+                'attacher': attachment.message.owner.display_name,
+                'created': attachment.message.date_created.isoformat(),
+                'uri': '%s/%s' % (config['jira']['attachments_url'].rstrip('/'), f_in.filename)
+            })
+    return attachments
 
 
 def create_issue(task, bug):
@@ -60,22 +67,26 @@ def create_issue(task, bug):
         'assignee': task.assignee.display_name,
         'summary': bug.title,
         'description': bug.description,
-        'priority': task.importance,
+        'priority': translate_priority(task.importance),
         'labels': bug.tags,
         'issueType': 'Bug',
         'created': task.date_created.isoformat(),
         'updated': bug.date_last_updated.isoformat(),
-        'comments': [{'body': c.content,
-                      'created': c.date_created.isoformat(),
-                      'author': get_username(c.owner_link)}
-                     for c in bug.messages],
+        'comments': [],
         'history': [],  # TODO: activities
         'affectedVersions': [],
-        'attachments': create_attachment(bug)
+        'attachments': create_attachments(bug)
     }
+
+    for comment in bug.messages:
+        c = {'body': comment.content,
+             'created': comment.date_created.isoformat(),
+             'author': clean_id(comment.owner_link)}
+        create_user(c['author'])
+        issue['comments'].append(c)
+
     sub_tasks = []
     links = []
-
     for activity in bug.activity:
         if activity.whatchanged == 'nominated for series':
             version = activity.newvalue.split('/')[-1]
@@ -110,6 +121,17 @@ def create_issue(task, bug):
     return issue, sub_tasks, links
 
 
+def get_releases(project):
+    releases = []
+    for release in project.releases:
+        r = {'name': release.version}
+        if hasattr(release, 'date_released'):
+            r['releaseDate'] = release.date_released.isoformat()
+            r['released'] = True
+        releases.append(r)
+    return releases
+
+
 def export_issues():
     logging.info('===== Export: Issues =====')
     project = lp.projects[config['launchpad']['project']]
@@ -121,12 +143,14 @@ def export_issues():
         information_type=['Public', 'Public Security', 'Private Security',
                           'Private', 'Proprietary', 'Embargoed'])
 
+    export_bug['projects'][0]['versions'] = get_releases(project)
+
     counter = 0
     for task in tqdm(bug_tasks[:20], desc='Export issues'):  # TODO: remove slice
         bug = task.bug
 
         for activity in bug.activity:
-            create_user(clean_id(activity.person_link), [])
+            create_user(clean_id(activity.person_link))
 
         filename = os.path.normpath('%s/%s_issue.json' % (config['local']['issues'], bug.id))
         if os.path.exists(filename):
@@ -152,7 +176,7 @@ def export_issues():
     logging.info('Exported issues: %s/%s' % (counter, len(bug_tasks)))
 
 
-def create_user(username, groups):
+def create_user(username):
     filename = os.path.normpath('%s/%s_user.json' % (config['local']['users'], username))
     if os.path.exists(filename):
         logging.info('User %s already exists, skipping: %s' % (username, filename))
@@ -175,8 +199,8 @@ def create_user(username, groups):
             'active': True,
         }
 
-        if groups:
-            user['groups'] = groups
+        if user_groups:
+            user['groups'] = user_groups
         if email:
             user['email'] = email
 
@@ -190,17 +214,13 @@ def create_user(username, groups):
 def export_users():
     logging.info('===== Export: Users =====')
 
-    groups = []
-    if config['jira']['groups']:
-        groups = [g.strip() for g in config['jira']['groups'].split(',')]
-
     project = lp.projects[config['launchpad']['project']]
     subscriptions = project.getSubscriptions()
 
     counter = 0
     for sub in tqdm(subscriptions, desc='Export users'):
         username = clean_id(sub.subscriber_link)
-        if create_user(username, groups):
+        if create_user(username):
             counter += 1
     logging.info('Exported users: %s/%s' % (counter, len(subscriptions)))
 
@@ -249,6 +269,9 @@ if __name__ == '__main__':
 
     lp = Launchpad.login_with('LP2JIRA', config['launchpad']['service'],
                               launchpadlib_dir=config['launchpad']['cache_dir'])
+    user_groups = []
+    if config['jira']['groups']:
+        user_groups = [g.strip() for g in config['jira']['groups'].split(',')]
 
     export_bug = {
         'users': [],
