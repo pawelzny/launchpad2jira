@@ -7,15 +7,15 @@ from lp2jira.config import config
 
 
 def main():
-    from lp2jira.blueprint import export_blueprints
+    from lp2jira.blueprint import ExportBlueprints
     from lp2jira.export import compile_export_file
     from lp2jira.issue import export_issues
-    from lp2jira.user import ExportUser
+    from lp2jira.user import ExportSubscribers
 
     logging.info('===== Export start =====')
-    ExportUser().subscribers()
+    ExportSubscribers().run()
     export_issues()
-    export_blueprints()
+    ExportBlueprints().run()
     compile_export_file()
     logging.info('===== Export complete =====')
 

@@ -11,24 +11,6 @@ from lp2jira.lp import lp
 from lp2jira.utils import clean_id, get_user_groups
 
 
-class ExportUser(Export):
-    def __init__(self):
-        super().__init__(entity=User)
-
-    def subscribers(self):
-        logging.info('===== Export: Subscribers =====')
-
-        project = lp.projects[config['launchpad']['project']]
-        subscriptions = project.getSubscriptions()
-
-        counter = 0
-        for sub in tqdm(subscriptions, desc='Export subscribers'):
-            if self.run(username=clean_id(sub.subscriber_link)):
-                counter += 1
-
-        logging.info(f'Exported users: {counter}/{len(subscriptions)}')
-
-
 class User:
     def __init__(self, name, display_name, email=None, user_groups=None, active=True):
         self.name = name
@@ -73,3 +55,23 @@ class User:
         if self.email:
             dmp['email'] = self.email
         return dmp
+
+
+class ExportUser(Export):
+    def __init__(self):
+        super().__init__(entity=User)
+
+
+class ExportSubscribers(ExportUser):
+    def run(self):
+        logging.info('===== Export: Subscribers =====')
+
+        project = lp.projects[config['launchpad']['project']]
+        subscriptions = project.getSubscriptions()
+
+        counter = 0
+        for sub in tqdm(subscriptions, desc='Export subscribers'):
+            if super().run(username=clean_id(sub.subscriber_link)):
+                counter += 1
+
+        logging.info(f'Exported users: {counter}/{len(subscriptions)}')

@@ -135,3 +135,10 @@ def get_releases(project):
 def get_username(owner_link):
     owner_id = clean_id(owner_link)
     return lp.people[owner_id].display_name
+
+
+class Issue:
+    def __init__(self, issue_id, status, owner, assignee, title, desc,
+                 priority, tags, issue_type, created, updated, comments,
+                 history, affected_versions, attachments):
+        pass
