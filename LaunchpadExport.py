@@ -8,7 +8,7 @@ from lp2jira.config import config
 
 def main():
     from lp2jira.blueprint import ExportBlueprints
-    from lp2jira.export import compile_export_file
+    from lp2jira.export import ExportCompile
     from lp2jira.issue import ExportBugs
     from lp2jira.user import ExportSubscribers
 
@@ -17,7 +17,7 @@ def main():
     ExportBugs().run()
     ExportBlueprints().run()
     logging.info('===== Compile export file =====')
-    compile_export_file()
+    ExportCompile().run()
     logging.info('===== Export complete =====')
 
 

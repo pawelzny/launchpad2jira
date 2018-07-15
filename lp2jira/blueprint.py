@@ -15,6 +15,8 @@ from lp2jira.utils import bug_template, translate_status
 
 
 class Blueprint(Issue):
+    issue_type = config['mapping']['blueprint_type']
+
     @classmethod
     def create(cls, name):
         project = lp.projects[config['launchpad']['project']]
@@ -28,12 +30,12 @@ class Blueprint(Issue):
             status = translate_status('New')
 
         description = f'{spec.summary}\n\n{spec.whiteboard}\n\n{spec.workitems_text}'
-
-        # TODO: issue type must not be hardcoded
+        custom_fields = Issue.create_custom_fields(spec)
+        # TODO: issue type can't be hardcoded
         return cls(issue_id=name, status=status, owner=spec.owner, title=spec.title,
                    desc=description, priority=spec.priority,
-                   issue_type='Story', created=spec.date_created.isoformat(),
-                   assignee=spec.assignee)
+                   created=spec.date_created.isoformat(),
+                   assignee=spec.assignee, custom_fields=custom_fields)
 
     def export(self):
         self._export_related_users()

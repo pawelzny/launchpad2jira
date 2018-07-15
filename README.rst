@@ -61,6 +61,19 @@ The most important configuration you have to change are:
     # URL to server where exported attachments are visible to JIRA instance
     attachments_url = http://localhost/attachments/
 
+    [mapping]
+    # Launchpad Bug task to JIRA issue_type conversion.
+    # Bug is a main task you can find in Launchpad.
+    bug_type = Bug
+
+    # Launchpad Bug sub-task to JIRA issue_type conversion.
+    # Every bug can have multiple sub-tasks related to affected versions
+    sub_task_type = Sub-task
+
+    # Launchpad Blueprint to JIRA issue_type conversion.
+    # Blueprints are proposals for new features or big changes.
+    blueprint_type = Story
+
 
 You don't need to change anything in other sections.
 

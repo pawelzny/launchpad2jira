@@ -9,7 +9,8 @@ from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.user import ExportUser
-from lp2jira.utils import bug_template, clean_id, get_owner, translate_priority, translate_status
+from lp2jira.utils import (bug_template, clean_id, get_custom_fields, get_owner,
+                           translate_priority, translate_status)
 
 
 def get_releases(project):
@@ -24,8 +25,10 @@ def get_releases(project):
 
 
 class Issue:
+    issue_type = 'Task'
+
     def __init__(self, issue_id, status, owner, assignee, title, desc,
-                 priority, issue_type, created):
+                 priority, created, custom_fields):
         self.issue_id = str(issue_id)
         self.status = translate_status(status)
         self.owner = owner
@@ -33,8 +36,8 @@ class Issue:
         self.title = title
         self.desc = desc
         self.priority = translate_priority(priority)
-        self.issue_type = issue_type
         self.created = created
+        self.custom_fields = custom_fields
         self.export_user = ExportUser()
 
     def _export_related_users(self):
@@ -48,6 +51,16 @@ class Issue:
         except Exception as exc:
             logging.exception(exc)
 
+    @staticmethod
+    def create_custom_fields(lp_entity):
+        customs = []
+        if config['DEFAULT'].getboolean('export_custom_fields'):
+            for key, val in get_custom_fields().items():
+                if hasattr(lp_entity, key):
+                    val['value'] = getattr(lp_entity, key)
+                    customs.append(val)
+        return customs
+
     def _dump(self):
         issue = {
             'externalId': self.issue_id,
@@ -57,19 +70,23 @@ class Issue:
             'description': self.desc,
             'priority': self.priority,
             'issueType': self.issue_type,
-            'created': self.created
+            'created': self.created,
         }
         if self.assignee:
             issue['assignee'] = self.assignee.display_name
+        if self.custom_fields:
+            issue['customFieldValues'] = self.custom_fields
         return issue
 
 
 class Bug(Issue):
-    def __init__(self, issue_id, status, owner, assignee, title, desc,
-                 priority, tags, issue_type, created, updated, comments,
-                 history, affected_versions, attachments, sub_tasks, links, releases):
+    issue_type = config['mapping']['bug_type']
+
+    def __init__(self, issue_id, status, owner, assignee, title, desc, priority, tags,
+                 created, updated, comments, history, affected_versions, attachments, sub_tasks,
+                 links, releases, custom_fields):
         super().__init__(issue_id, status, owner, assignee, title, desc,
-                         priority, issue_type, created)
+                         priority, created, custom_fields)
 
         self.tags = tags
         self.updated = updated
@@ -103,8 +120,9 @@ class Bug(Issue):
                                    status=task.status, owner=get_owner(activity.person_link),
                                    assignee=task.assignee,
                                    title=f'Nominated for series: {version}',
-                                   desc='', priority=task.importance, issue_type='Sub-task',
-                                   created=activity.datechanged.isoformat())
+                                   desc='', priority=task.importance,
+                                   created=activity.datechanged.isoformat(),
+                                   custom_fields=[])
                 sub_tasks.append(sub_task)
                 links.append({
                     'name': 'sub-task-link',
@@ -120,12 +138,16 @@ class Bug(Issue):
                 sub_tasks = [s for s in sub_tasks
                              if s.title != f'Nominated for series: {version}']
 
+        custom_fields = Issue.create_custom_fields(task)
+        custom_fields.extend(Issue.create_custom_fields(bug))
+
         return cls(issue_id=bug.id, status=task.status, owner=bug.owner, assignee=task.assignee,
                    title=bug.title, desc=bug.description, priority=task.importance,
-                   tags=tags, issue_type='Bug', created=task.date_created.isoformat(),
+                   tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments, history=[],
                    affected_versions=affected_versions, attachments=create_attachments(bug),
-                   sub_tasks=sub_tasks, links=links, releases=releases)
+                   sub_tasks=sub_tasks, links=links, releases=releases,
+                   custom_fields=custom_fields)
 
     def export(self):
         filename = os.path.normpath(f'{config["local"]["issues"]}/{self.issue_id}_issue.json')
@@ -165,7 +187,7 @@ class Bug(Issue):
 
 
 class SubTask(Issue):
-    pass
+    issue_type = config['mapping']['sub_task_type']
 
 
 class ExportBug(Export):
@@ -186,7 +208,7 @@ class ExportBugs(ExportBug):
                               'Private', 'Proprietary', 'Embargoed'])
 
         counter = 0
-        for task in tqdm(bug_tasks[:20], desc='Export issues'):
+        for task in tqdm(bug_tasks, desc='Export issues'):
             if super().run(task=task, bug=task.bug, releases=get_releases(project)):
                 counter += 1
 
