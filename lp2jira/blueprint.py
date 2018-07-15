@@ -33,7 +33,7 @@ class Blueprint(Issue):
         # TODO: issue type must not be hardcoded
         return cls(issue_id=name, status=status, owner=spec.owner, title=spec.title,
                    desc=description, priority=spec.priority,
-                   issue_type='Story', created=spec.date_created,
+                   issue_type='Story', created=spec.date_created.isoformat(),
                    assignee=spec.assignee)
 
     def export(self):

@@ -16,7 +16,7 @@ def create_attachments(bug):
             logging.info('Attachment %s_%s already exists, '
                          'skipping: %s' % (bug.id, f_in.filename, filename))
         else:
-            with open(filename, 'w') as f_out:
+            with open(filename, 'wb') as f_out:
                 while True:
                     buff = f_in.read(1024)
                     if buff:

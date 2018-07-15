@@ -8,9 +8,9 @@ from tqdm import tqdm
 from lp2jira.attachment import create_attachments
 from lp2jira.config import config
 from lp2jira.export import Export
-from lp2jira.user import ExportUser
 from lp2jira.lp import lp
-from lp2jira.utils import bug_template, clean_id, translate_priority, translate_status
+from lp2jira.user import ExportUser
+from lp2jira.utils import bug_template, clean_id, get_owner, translate_priority, translate_status
 
 
 def get_releases(project):
@@ -30,12 +30,12 @@ class Issue:
         self.issue_id = str(issue_id)
         self.status = translate_status(status)
         self.owner = owner
-        self.assignee = assignee.display_name if assignee else None
+        self.assignee = assignee or None
         self.title = title
         self.desc = desc
         self.priority = translate_priority(priority)
         self.issue_type = issue_type
-        self.created = created.isoformat()
+        self.created = created
         self.export_user = ExportUser()
 
     def _export_related_users(self):
@@ -73,7 +73,7 @@ class Bug(Issue):
                          priority, issue_type, created)
 
         self.tags = tags
-        self.updated = updated.isoformat()
+        self.updated = updated
         self.comments = comments
         self.history = history  # TODO: activities
         self.affected_versions = affected_versions
@@ -101,7 +101,7 @@ class Bug(Issue):
                 version = activity.newvalue.split('/')[-1]
 
                 sub_task = SubTask(issue_id=f'{bug.id}/{len(sub_tasks) + 1}',
-                                   status=task.status, owner=clean_id(activity.person_link),
+                                   status=task.status, owner=get_owner(activity.person_link),
                                    assignee=task.assignee,
                                    title=f'Nominated for series: {version}',
                                    desc='', priority=task.importance, issue_type='Sub-task',
@@ -124,7 +124,7 @@ class Bug(Issue):
         return cls(issue_id=bug.id, status=task.status, owner=bug.owner, assignee=task.assignee,
                    title=bug.title, desc=bug.description, priority=task.importance,
                    tags=tags, issue_type='Bug', created=task.date_created.isoformat(),
-                   updated=task.date_updated.isoformat(), comments=comments, history=[],
+                   updated=bug.date_last_updated.isoformat(), comments=comments, history=[],
                    affected_versions=affected_versions, attachments=create_attachments(bug),
                    sub_tasks=sub_tasks, links=links, releases=releases)
 

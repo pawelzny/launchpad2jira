@@ -9,6 +9,12 @@ def clean_id(item_id):
     return tail.lstrip('~')
 
 
+def get_owner(person_link):
+    from lp2jira.lp import lp
+    username = clean_id(person_link)
+    return lp.people[username]
+
+
 def translate_status(status):
     with open(config['mapping']['issue'], 'r') as f:
         mapping = json.load(f)
