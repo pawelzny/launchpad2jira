@@ -8,9 +8,9 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from lp2jira.lp import lp
+from lp2jira import user
 from lp2jira.config import config
-from lp2jira.user import create_user
+from lp2jira.lp import lp
 from lp2jira.utils import bug_template, clean_id, translate_priority, translate_status
 
 
@@ -24,14 +24,15 @@ def export_blueprints():
 
     specs = soup.find_all(href=lambda x: x and re.compile('\+spec/').search(x))
     counter = 0
+    export_user = user.ExportUser()
     for a in tqdm(specs, desc='Export blueprints'):
         name = a.get('href').split('/')[-1]
 
         try:
             spec = project.getSpecification(name=name)
-            create_user(clean_id(spec.owner.name))
+            export_user(username=clean_id(spec.owner.name))
             if spec.assignee:
-                create_user(clean_id(spec.assignee.name))
+                export_user(username=clean_id(spec.assignee.name))
         except Exception as e:
             logging.exception(e)
             continue

@@ -10,10 +10,10 @@ def main():
     from lp2jira.blueprint import export_blueprints
     from lp2jira.export import compile_export_file
     from lp2jira.issue import export_issues
-    from lp2jira.user import export_users
+    from lp2jira.user import ExportUser
 
     logging.info('===== Export start =====')
-    export_users()
+    ExportUser().subscribers()
     export_issues()
     export_blueprints()
     compile_export_file()

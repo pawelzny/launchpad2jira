@@ -43,3 +43,22 @@ def compile_export_file():
         json.dump(export_bug, f)
 
     logging.info('Exported data saved in: %s' % filename)
+
+
+class Export:
+    def __init__(self, entity):
+        self.entity = entity
+
+    def __call__(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        try:
+            entity = self.entity.create(*args, **kwargs)
+        except Exception as exc:
+            logging.error(f'{self.entity.__name__} export failed for {args} {kwargs}')
+            logging.exception(exc)
+            return False
+        else:
+            entity.export()
+            return True

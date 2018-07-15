@@ -5,10 +5,10 @@ import os
 
 from tqdm import tqdm
 
-from lp2jira.lp import lp
-from lp2jira.config import config
+from lp2jira import user
 from lp2jira.attachment import create_attachments
-from lp2jira.user import create_user
+from lp2jira.config import config
+from lp2jira.lp import lp
 from lp2jira.utils import bug_template, clean_id, translate_priority, translate_status
 
 
@@ -26,12 +26,13 @@ def export_issues():
     export_bug = bug_template()
     export_bug['projects'][0]['versions'] = get_releases(project)
 
+    export_user = user.ExportUser()
     counter = 0
     for task in tqdm(bug_tasks[:20], desc='Export issues'):
         bug = task.bug
 
         for activity in bug.activity:
-            create_user(clean_id(activity.person_link))
+            export_user(username=clean_id(activity.person_link))
 
         filename = os.path.normpath('%s/%s_issue.json' % (config['local']['issues'], bug.id))
         if os.path.exists(filename):
@@ -76,11 +77,12 @@ def create_issue(task, bug):
         'attachments': create_attachments(bug)
     }
 
+    export_user = user.ExportUser()
     for comment in bug.messages:
         c = {'body': comment.content,
              'created': comment.date_created.isoformat(),
              'author': clean_id(comment.owner_link)}
-        create_user(c['author'])
+        export_user(username=c['author'])
         issue['comments'].append(c)
 
     sub_tasks = []

@@ -5,40 +5,28 @@ import os
 
 from tqdm import tqdm
 
-from lp2jira.lp import lp
 from lp2jira.config import config
+from lp2jira.export import Export
+from lp2jira.lp import lp
 from lp2jira.utils import clean_id, get_user_groups
 
 
-def export_users():
-    logging.info('===== Export: Users =====')
+class ExportUser(Export):
+    def __init__(self):
+        super().__init__(entity=User)
 
-    project = lp.projects[config['launchpad']['project']]
-    subscriptions = project.getSubscriptions()
+    def subscribers(self):
+        logging.info('===== Export: Subscribers =====')
 
-    counter = 0
-    for sub in tqdm(subscriptions, desc='Export users'):
-        username = clean_id(sub.subscriber_link)
-        try:
-            user = User.create(username)
-        except Exception as exc:
-            logging.error('User %s export failed' % username)
-            logging.exception(exc)
-        else:
-            user.export()
-            counter += 1
-    logging.info('Exported users: %s/%s' % (counter, len(subscriptions)))
+        project = lp.projects[config['launchpad']['project']]
+        subscriptions = project.getSubscriptions()
 
+        counter = 0
+        for sub in tqdm(subscriptions, desc='Export subscribers'):
+            if self.run(username=clean_id(sub.subscriber_link)):
+                counter += 1
 
-def create_user(username):
-    try:
-        user = User.create(username)
-    except Exception as exc:
-        logging.error('User %s export failed' % username)
-        logging.exception(exc)
-        return False
-    else:
-        user.export()
+        logging.info(f'Exported users: {counter}/{len(subscriptions)}')
 
 
 class User:
