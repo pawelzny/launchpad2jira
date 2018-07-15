@@ -18,10 +18,14 @@ TODO
 Installation
 ============
 
+** Require: Python 3.6 **
+
 Prepare virtual environment first unless you don't care about PIP libs.
 
 .. code-block:: console
 
+    python3.6 -m venv .venv
+    source .venv/bin/activate
     pip install -r requirements.txt
 
 All required libraries will be installed in to your system or virtualenv.
@@ -126,6 +130,11 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 
 History
 =======
+
+**2018-07-15 [dev]:**
+
+* support for custom fields
+* configurable issues type
 
 **2018-06-28 [dev]:**
 

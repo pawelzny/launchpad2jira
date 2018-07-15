@@ -1,5 +1,9 @@
+wheel==0.31.1
+setuptools==39.0.1
+pkg-resources
 launchpadlib==1.10.6
 keyrings.alt==3.1
 tqdm==4.23.4
 beautifulsoup4==4.6.0
 requests==2.19.1
+
