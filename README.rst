@@ -12,10 +12,7 @@ from launchpad to JSON file which is compatible with default JIRA's import plugi
 TODO
 ====
 
-**Warning! Work in progress. Few things are still missing.**
-
 * Export issue history (activities)
-* Support for custom fields
 
 
 Installation
@@ -35,13 +32,17 @@ Configuration
 
 Configuration required to edit config and mapping files.
 
-Export.conf
------------
+Export.cfg
+----------
 
-Edit `export.conf` file.
+Edit `export.cfg` file.
 The most important configuration you have to change are:
 
 .. code-block:: ini
+
+    [DEFAULT]
+    # Export custom fields defined in mapping file
+    export_custom_fields = true
 
     [launchpad]
     # Project short name on Launchpad [required]
@@ -59,6 +60,19 @@ The most important configuration you have to change are:
 
     # URL to server where exported attachments are visible to JIRA instance
     attachments_url = http://localhost/attachments/
+
+    [mapping]
+    # Launchpad Bug task to JIRA issue_type conversion.
+    # Bug is a main task you can find in Launchpad.
+    bug_type = Bug
+
+    # Launchpad Bug sub-task to JIRA issue_type conversion.
+    # Every bug can have multiple sub-tasks related to affected versions
+    sub_task_type = Sub-task
+
+    # Launchpad Blueprint to JIRA issue_type conversion.
+    # Blueprints are proposals for new features or big changes.
+    blueprint_type = Story
 
 
 You don't need to change anything in other sections.
@@ -82,6 +96,16 @@ status. All *keys* are statuses from Launchpad, and *values* are statuses from J
 
 Values must be exact names of priorities from JIRA.
 You can check on http://<my-jira.com>/secure/admin/ViewPriorities.jspa
+
+Custom fields mapping
+---------------------
+
+Edit `mapping/lp2jira_custom_fields.json` file.
+This file provides mapping between Launchpad any field and JIRA custom field.
+All *keys* are keys from Launchpad, and *values* are mapping to JIRA custom field.
+
+Any Launchpad key can be mapped to JIRA custom field. Script will lookup
+if defined key exists on Launchpad side and will apply mapping.
 
 Run Export
 ==========
