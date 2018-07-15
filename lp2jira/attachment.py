@@ -13,7 +13,7 @@ def create_attachments(bug):
                                                   bug.id, f_in.filename))
 
         if os.path.exists(filename):
-            logging.info('Attachment %s_%s already exists, '
+            logging.debug('Attachment %s_%s already exists, '
                          'skipping: %s' % (bug.id, f_in.filename, filename))
         else:
             with open(filename, 'wb') as f_out:
@@ -23,7 +23,7 @@ def create_attachments(bug):
                         f_out.write(buff)
                     else:
                         break
-            logging.info('Attachment %s_%s export success' % (bug.id, f_in.filename))
+            logging.debug('Attachment %s_%s export success' % (bug.id, f_in.filename))
             attachments.append({
                 'name': f_in.filename,
                 'attacher': attachment.message.owner.display_name,

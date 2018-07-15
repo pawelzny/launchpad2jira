@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 
-from lp2jira.config import config
+from lp2jira.config import config, lp
 
 
 def clean_id(item_id):
@@ -10,7 +10,6 @@ def clean_id(item_id):
 
 
 def get_owner(person_link):
-    from lp2jira.lp import lp
     username = clean_id(person_link)
     return lp.people[username]
 

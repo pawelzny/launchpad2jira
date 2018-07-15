@@ -6,9 +6,8 @@ import os
 from tqdm import tqdm
 
 from lp2jira.attachment import create_attachments
-from lp2jira.config import config
+from lp2jira.config import config, lp
 from lp2jira.export import Export
-from lp2jira.lp import lp
 from lp2jira.user import ExportUser
 from lp2jira.utils import bug_template, clean_id, get_owner, translate_priority, translate_status
 
@@ -61,7 +60,7 @@ class Issue:
             'created': self.created
         }
         if self.assignee:
-            issue['assignee'] = self.assignee
+            issue['assignee'] = self.assignee.display_name
         return issue
 
 
@@ -131,7 +130,7 @@ class Bug(Issue):
     def export(self):
         filename = os.path.normpath(f'{config["local"]["issues"]}/{self.issue_id}_issue.json')
         if os.path.exists(filename):
-            logging.info(f'Issue {self.issue_id} already exists, skipping: {filename}')
+            logging.debug(f'Issue {self.issue_id} already exists, skipping: {filename}')
             return True
 
         logging.debug(f'Issue {self.issue_id} fetching')

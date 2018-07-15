@@ -5,9 +5,8 @@ import os
 
 from tqdm import tqdm
 
-from lp2jira.config import config
+from lp2jira.config import config, lp
 from lp2jira.export import Export
-from lp2jira.lp import lp
 from lp2jira.utils import get_user_groups, clean_id
 
 
@@ -34,7 +33,7 @@ class User:
     def export(self):
         filename = os.path.normpath('%s/%s_user.json' % (config['local']['users'], self.name))
         if os.path.exists(filename):
-            logging.info('User %s already exists, skipping: %s' % (self.name, filename))
+            logging.debug('User %s already exists, skipping: %s' % (self.name, filename))
             return True
 
         with open(filename, 'w') as f:

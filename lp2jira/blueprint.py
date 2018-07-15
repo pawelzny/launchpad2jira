@@ -8,10 +8,9 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from lp2jira.config import config
+from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.issue import Issue
-from lp2jira.lp import lp
 from lp2jira.utils import bug_template, translate_status
 
 
@@ -41,7 +40,7 @@ class Blueprint(Issue):
 
         filename = os.path.normpath(f'{config["local"]["issues"]}/{self.issue_id}_blueprint.json')
         if os.path.exists(filename):
-            logging.info(f'Blueprint {self.issue_id} already exists, skipping: {filename}')
+            logging.debug(f'Blueprint {self.issue_id} already exists, skipping: {filename}')
             return True
 
         export_bug = bug_template()
@@ -74,4 +73,4 @@ class ExportBlueprints(ExportBlueprint):
             if super().run(name=name):
                 counter += 1
 
-        logging.info('Exported blueprints: %s/%s' % (counter, len(specs)))
+        logging.info(f'Exported blueprints: {counter}/{len(specs)}')
