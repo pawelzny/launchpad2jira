@@ -9,13 +9,14 @@ from lp2jira.config import config
 def main():
     from lp2jira.blueprint import ExportBlueprints
     from lp2jira.export import compile_export_file
-    from lp2jira.issue import export_issues
+    from lp2jira.issue import ExportBugs
     from lp2jira.user import ExportSubscribers
 
     logging.info('===== Export start =====')
     ExportSubscribers().run()
-    export_issues()
+    ExportBugs().run()
     ExportBlueprints().run()
+    logging.info('===== Compile export file =====')
     compile_export_file()
     logging.info('===== Export complete =====')
 

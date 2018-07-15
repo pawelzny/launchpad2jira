@@ -8,7 +8,7 @@ from tqdm import tqdm
 from lp2jira.config import config
 from lp2jira.export import Export
 from lp2jira.lp import lp
-from lp2jira.utils import clean_id, get_user_groups
+from lp2jira.utils import get_user_groups, clean_id
 
 
 class User:
@@ -40,7 +40,7 @@ class User:
         with open(filename, 'w') as f:
             json.dump(self._dump(), f)
 
-        logging.info('User %s export success' % self.name)
+        logging.debug('User %s export success' % self.name)
         return True
 
     def _dump(self):

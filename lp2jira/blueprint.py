@@ -10,25 +10,12 @@ from tqdm import tqdm
 
 from lp2jira.config import config
 from lp2jira.export import Export
+from lp2jira.issue import Issue
 from lp2jira.lp import lp
-from lp2jira.user import ExportUser
-from lp2jira.utils import bug_template, clean_id, translate_priority, translate_status
+from lp2jira.utils import bug_template, translate_status
 
 
-class Blueprint:
-    def __init__(self, name, status, owner, title, desc, priority,
-                 issue_type, created, assignee):
-        self.name = name
-        self.status = status
-        self.owner = owner
-        self.title = title
-        self.desc = desc
-        self.priority = translate_priority(priority)
-        self.issue_type = issue_type
-        self.created = created.isoformat()
-        self.assignee = assignee.display_name if assignee else None
-        self.export_user = ExportUser()
-
+class Blueprint(Issue):
     @classmethod
     def create(cls, name):
         project = lp.projects[config['launchpad']['project']]
@@ -44,7 +31,7 @@ class Blueprint:
         description = f'{spec.summary}\n\n{spec.whiteboard}\n\n{spec.workitems_text}'
 
         # TODO: issue type must not be hardcoded
-        return cls(name=name, status=status, owner=spec.owner, title=spec.title,
+        return cls(issue_id=name, status=status, owner=spec.owner, title=spec.title,
                    desc=description, priority=spec.priority,
                    issue_type='Story', created=spec.date_created,
                    assignee=spec.assignee)
@@ -52,9 +39,9 @@ class Blueprint:
     def export(self):
         self._export_related_users()
 
-        filename = os.path.normpath(f'{config["local"]["issues"]}/{self.name}_blueprint.json')
+        filename = os.path.normpath(f'{config["local"]["issues"]}/{self.issue_id}_blueprint.json')
         if os.path.exists(filename):
-            logging.info(f'Blueprint {self.name} already exists, skipping: {filename}')
+            logging.info(f'Blueprint {self.issue_id} already exists, skipping: {filename}')
             return True
 
         export_bug = bug_template()
@@ -63,34 +50,8 @@ class Blueprint:
         with open(filename, 'w') as f:
             json.dump(export_bug, f)
 
-        logging.info(f'Blueprint {self.name} export success')
+        logging.debug(f'Blueprint {self.issue_id} export success')
         return True
-
-    def _dump(self):
-        issue = {
-            'externalId': self.name,
-            'status': self.status,
-            'reporter': self.owner.display_name,
-            'summary': self.title,
-            'description': self.desc,
-            'priority': self.priority,
-            'issueType': self.issue_type,
-            'created': self.created
-        }
-        if self.assignee:
-            issue['assignee'] = self.assignee
-        return issue
-
-    def _export_related_users(self):
-        try:
-            self.export_user(username=clean_id(self.owner.name))
-        except Exception as exc:
-            logging.exception(exc)
-        try:
-            if self.assignee:
-                self.export_user(username=clean_id(self.assignee.name))
-        except Exception as exc:
-            logging.exception(exc)
 
 
 class ExportBlueprint(Export):

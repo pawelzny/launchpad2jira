@@ -12,13 +12,19 @@ def clean_id(item_id):
 def translate_status(status):
     with open(config['mapping']['issue'], 'r') as f:
         mapping = json.load(f)
-    return mapping[status.title()]
+    try:
+        return mapping[status.title()]
+    except KeyError:
+        return status
 
 
 def translate_priority(priority):
     with open(config['mapping']['priority'], 'r') as f:
         mapping = json.load(f)
-    return mapping[priority.title()]
+    try:
+        return mapping[priority.title()]
+    except KeyError:
+        return priority
 
 
 def bug_template():
