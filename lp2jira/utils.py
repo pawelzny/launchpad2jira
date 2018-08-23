@@ -41,6 +41,7 @@ def bug_template():
                 'name': config['jira']['project'],
                 'key': config['jira']['key'],
                 'type': 'software',
+                'versions': [],
                 'issues': [],
             },
         ],

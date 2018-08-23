@@ -45,6 +45,7 @@ class ExportCompile(Export):
                     logging.error(f'Export error in issue: {filename}')
                     continue
             export_bug['projects'][0]['issues'].extend(issue['projects'][0]['issues'])
+            export_bug['projects'][0]['versions'].extend(issue['projects'][0]['versions'])
             export_bug['links'].extend(issue['links'])
 
         for filename in tqdm(os.listdir(config['local']['users']), desc='Compile users'):

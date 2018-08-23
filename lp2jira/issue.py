@@ -84,7 +84,7 @@ class Bug(Issue):
 
     def __init__(self, issue_id, status, owner, assignee, title, desc, priority, tags,
                  created, updated, comments, history, affected_versions, attachments, sub_tasks,
-                 links, releases, custom_fields):
+                 links, releases, custom_fields, fixed_versions):
         super().__init__(issue_id, status, owner, assignee, title, desc,
                          priority, created, custom_fields)
 
@@ -93,6 +93,7 @@ class Bug(Issue):
         self.comments = comments
         self.history = history  # TODO: activities
         self.affected_versions = affected_versions
+        self.fixed_versions = fixed_versions
         self.attachments = attachments
         self.sub_tasks = sub_tasks
         self.links = links
@@ -141,13 +142,17 @@ class Bug(Issue):
         custom_fields = Issue.create_custom_fields(task)
         custom_fields.extend(Issue.create_custom_fields(bug))
 
+        fixed_versions = []
+        if task.milestone_link:
+            fixed_versions.append(task.milestone.name)
+
         return cls(issue_id=bug.id, status=task.status, owner=bug.owner, assignee=task.assignee,
                    title=bug.title, desc=bug.description, priority=task.importance,
                    tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments, history=[],
                    affected_versions=affected_versions, attachments=create_attachments(bug),
                    sub_tasks=sub_tasks, links=links, releases=releases,
-                   custom_fields=custom_fields)
+                   custom_fields=custom_fields, fixed_versions=fixed_versions)
 
     def export(self):
         filename = os.path.normpath(f'{config["local"]["issues"]}/{self.issue_id}_issue.json')
@@ -174,6 +179,7 @@ class Bug(Issue):
                       'comments': self.comments,
                       'history': self.history,
                       'affectedVersions': self.affected_versions,
+                      'fixedVersions': self.fixed_versions,
                       'attachments': self.attachments})
         return issue
 
