@@ -2,6 +2,7 @@
 # coding: utf-8
 import logging
 import os
+import sys
 
 from lp2jira.config import config
 
@@ -30,4 +31,10 @@ if __name__ == '__main__':
         if not os.path.exists(directory):
             os.mkdir(directory)
 
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        msg = "Export has been stopped by user"
+        print(msg)
+        logging.info(msg)
+        sys.exit(0)
