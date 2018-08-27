@@ -10,7 +10,8 @@ from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.user import ExportUser
 from lp2jira.utils import (bug_template, clean_id, get_custom_fields, get_owner,
-                           translate_priority, translate_status)
+                           translate_priority, translate_status,
+                           convert_custom_field_type)
 
 
 def get_releases(project):
@@ -57,7 +58,8 @@ class Issue:
         if config['DEFAULT'].getboolean('export_custom_fields'):
             for key, val in get_custom_fields().items():
                 if hasattr(lp_entity, key):
-                    val['value'] = getattr(lp_entity, key)
+                    lp_val = getattr(lp_entity, key)
+                    val['value'] = convert_custom_field_type(val['fieldType'], lp_val)
                     customs.append(val)
         return customs
 
@@ -120,7 +122,7 @@ class Bug(Issue):
                 sub_task = SubTask(issue_id=f'{bug.id}/{len(sub_tasks) + 1}',
                                    status=task.status, owner=get_owner(activity.person_link),
                                    assignee=task.assignee,
-                                   title=f'Nominated for series: {version}',
+                                   title=f'[{version}] {bug.title}',
                                    desc='', priority=task.importance,
                                    created=activity.datechanged.isoformat(),
                                    custom_fields=[])
@@ -136,8 +138,7 @@ class Bug(Issue):
 
             if activity.whatchanged == 'bug task deleted':
                 version = activity.oldvalue.split('/')[-1]
-                sub_tasks = [s for s in sub_tasks
-                             if s.title != f'Nominated for series: {version}']
+                sub_tasks = [s for s in sub_tasks if s.title != f'[{version}] {bug.title}']
 
         custom_fields = Issue.create_custom_fields(task)
         custom_fields.extend(Issue.create_custom_fields(bug))
@@ -161,8 +162,10 @@ class Bug(Issue):
             return True
 
         logging.debug(f'Issue {self.issue_id} fetching')
+
+        all_versions = list(set(self.releases + self.fixed_versions + self.affected_versions))
         export_bug = bug_template()
-        export_bug['projects'][0]['versions'] = self.releases
+        export_bug['projects'][0]['versions'] = all_versions
         export_bug['projects'][0]['issues'] = [self._dump()] + [s._dump() for s in self.sub_tasks]
         export_bug['links'] = self.links
 

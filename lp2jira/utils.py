@@ -56,3 +56,21 @@ def get_custom_fields():
     with open(config['mapping']['custom_fields'], 'r') as f:
         mapping = json.load(f)
     return mapping
+
+
+def convert_custom_field_type(field_type, value):
+    t = field_type.split(':')[-1].lower()
+
+    if 'string' in t or 'text' in t:
+        return str(value)
+
+    if 'bool' in t:
+        return bool(value)
+
+    if 'float' in t:
+        return float(value)
+
+    if 'int' in t:
+        return int(value)
+
+    return value
