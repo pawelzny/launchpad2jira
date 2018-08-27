@@ -29,7 +29,7 @@ class Issue:
     issue_type = 'Task'
 
     def __init__(self, issue_id, status, owner, assignee, title, desc,
-                 priority, created, custom_fields):
+                 priority, created, custom_fields, affected_versions):
         self.issue_id = str(issue_id)
         self.status = translate_status(status)
         self.owner = owner
@@ -39,6 +39,7 @@ class Issue:
         self.priority = translate_priority(priority)
         self.created = created
         self.custom_fields = custom_fields
+        self.affected_versions = affected_versions
         self.export_user = ExportUser()
 
     def _export_related_users(self):
@@ -88,13 +89,12 @@ class Bug(Issue):
                  created, updated, comments, history, affected_versions, attachments, sub_tasks,
                  links, releases, custom_fields, fixed_versions):
         super().__init__(issue_id, status, owner, assignee, title, desc,
-                         priority, created, custom_fields)
+                         priority, created, custom_fields, affected_versions)
 
         self.tags = tags
         self.updated = updated
         self.comments = comments
         self.history = history  # TODO: activities
-        self.affected_versions = affected_versions
         self.fixed_versions = fixed_versions
         self.attachments = attachments
         self.sub_tasks = sub_tasks
@@ -123,9 +123,9 @@ class Bug(Issue):
                                    status=task.status, owner=get_owner(activity.person_link),
                                    assignee=task.assignee,
                                    title=f'[{version}] {bug.title}',
-                                   desc='', priority=task.importance,
+                                   desc=bug.description, priority=task.importance,
                                    created=activity.datechanged.isoformat(),
-                                   custom_fields=[])
+                                   custom_fields=[], affected_versions=[version])
                 sub_tasks.append(sub_task)
                 links.append({
                     'name': 'sub-task-link',

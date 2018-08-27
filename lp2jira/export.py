@@ -64,6 +64,6 @@ class ExportCompile(Export):
 
         filename = os.path.join(config['local']['export'], config['jira']['filename'])
         with open(filename, 'w') as f:
-            json.dump(export_bug, f)
+            json.dump(export_bug, f, indent=2, sort_keys=True)
 
         logging.info(f'Exported data saved in: {filename}')
