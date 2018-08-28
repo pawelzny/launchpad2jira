@@ -23,6 +23,10 @@ def get_releases(project):
     return releases
 
 
+def convert_versions(versions):
+    return [{'name': str(v)} for v in versions]
+
+
 class Issue:
     issue_type = 'Task'
 
@@ -165,7 +169,9 @@ class Bug(Issue):
             logging.debug(f'Bug {self.issue_id} already exists, skipping: "{filename}"')
             return True
 
-        all_versions = list(set(self.releases + self.fixed_versions + self.affected_versions))
+        versions = set(self.fixed_versions + self.affected_versions)
+        all_versions = self.releases + convert_versions(versions)
+
         export_bug = bug_template()
         export_bug['projects'][0]['versions'] = all_versions
         export_bug['projects'][0]['issues'] = [self._dump()] + [s._dump() for s in self.sub_tasks]

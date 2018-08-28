@@ -48,9 +48,6 @@ class ExportCompile(Export):
             export_bug['projects'][0]['versions'].extend(issue['projects'][0]['versions'])
             export_bug['links'].extend(issue['links'])
 
-        # remove version duplicates
-        export_bug['projects'][0]['versions'] = list(set(export_bug['projects'][0]['versions']))
-
         for filename in tqdm(os.listdir(config['local']['users']), desc='Compile users'):
             with open(os.path.join(config['local']['users'], filename), 'r') as f:
                 try:
