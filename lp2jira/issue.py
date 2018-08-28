@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
 import logging
 import os
 
@@ -9,9 +8,8 @@ from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.user import ExportUser
-from lp2jira.utils import (bug_template, clean_id, get_custom_fields, get_owner,
-                           translate_priority, translate_status,
-                           convert_custom_field_type)
+from lp2jira.utils import (bug_template, clean_id, convert_custom_field_type, get_custom_fields,
+                           get_owner, json_dump, translate_priority, translate_status)
 
 
 def get_releases(project):
@@ -28,7 +26,7 @@ def get_releases(project):
 class Issue:
     issue_type = 'Task'
 
-    def __init__(self, issue_id, status, owner, assignee, title, desc,
+    def __init__(self, issue_id, status, owner, assignee, title, desc, tags,
                  priority, created, custom_fields, affected_versions):
         self.issue_id = str(issue_id)
         self.status = translate_status(status)
@@ -36,6 +34,7 @@ class Issue:
         self.assignee = assignee or None
         self.title = title
         self.desc = desc
+        self.tags = tags
         self.priority = translate_priority(priority)
         self.created = created
         self.custom_fields = custom_fields
@@ -74,6 +73,7 @@ class Issue:
             'priority': self.priority,
             'issueType': self.issue_type,
             'created': self.created,
+            'labels': list(self.tags),
         }
         if self.assignee:
             issue['assignee'] = self.assignee.display_name
@@ -88,10 +88,9 @@ class Bug(Issue):
     def __init__(self, issue_id, status, owner, assignee, title, desc, priority, tags,
                  created, updated, comments, history, affected_versions, attachments, sub_tasks,
                  links, releases, custom_fields, fixed_versions):
-        super().__init__(issue_id, status, owner, assignee, title, desc,
+        super().__init__(issue_id, status, owner, assignee, title, desc, tags,
                          priority, created, custom_fields, affected_versions)
 
-        self.tags = tags
         self.updated = updated
         self.comments = comments
         self.history = history  # TODO: activities
@@ -125,7 +124,7 @@ class Bug(Issue):
                                    title=f'[{version}] {bug.title}',
                                    desc=bug.description, priority=task.importance,
                                    created=activity.datechanged.isoformat(),
-                                   custom_fields=[], affected_versions=[version])
+                                   custom_fields=[], affected_versions=[version], tags=tags)
                 sub_tasks.append(sub_task)
                 links.append({
                     'name': 'sub-task-link',
@@ -156,12 +155,15 @@ class Bug(Issue):
                    custom_fields=custom_fields, fixed_versions=fixed_versions)
 
     def export(self):
-        filename = os.path.normpath(f'{config["local"]["issues"]}/{self.issue_id}_issue.json')
-        if os.path.exists(filename):
-            logging.debug(f'Issue {self.issue_id} already exists, skipping: {filename}')
-            return True
+        self._export_related_users()
 
-        logging.debug(f'Issue {self.issue_id} fetching')
+        filename = os.path.normpath(os.path.join(
+            config["local"]["issues"],
+            f'{self.issue_id} [{self.title}].json'.replace('/', '|')
+        ))
+        if os.path.exists(filename):
+            logging.debug(f'Bug {self.issue_id} already exists, skipping: "{filename}"')
+            return True
 
         all_versions = list(set(self.releases + self.fixed_versions + self.affected_versions))
         export_bug = bug_template()
@@ -170,15 +172,14 @@ class Bug(Issue):
         export_bug['links'] = self.links
 
         with open(filename, 'w') as f:
-            json.dump(export_bug, f)
+            json_dump(export_bug, f)
 
-        logging.debug(f'Issue {self.issue_id} export success')
+        logging.debug(f'Bug {self.issue_id} export success')
         return True
 
     def _dump(self):
         issue = super()._dump()
-        issue.update({'labels': self.tags,
-                      'updated': self.updated,
+        issue.update({'updated': self.updated,
                       'comments': self.comments,
                       'history': self.history,
                       'affectedVersions': self.affected_versions,
@@ -189,10 +190,16 @@ class Bug(Issue):
     def _export_related_users(self):
         super()._export_related_users()
         for comment in self.comments:
-            self.export_user(username=comment['author'])
+            try:
+                self.export_user(username=clean_id(comment['author']))
+            except Exception as exc:
+                logging.exception(exc)
 
         for sub_task in self.sub_tasks:
-            self.export_user(username=sub_task.owner)
+            try:
+                self.export_user(username=clean_id(sub_task.owner.name))
+            except Exception as exc:
+                logging.exception(exc)
 
 
 class SubTask(Issue):
@@ -217,7 +224,7 @@ class ExportBugs(ExportBug):
                               'Private', 'Proprietary', 'Embargoed'])
 
         counter = 0
-        for task in tqdm(bug_tasks, desc='Export issues'):
+        for task in tqdm(bug_tasks[3:10], desc='Export issues'):
             if super().run(task=task, bug=task.bug, releases=get_releases(project)):
                 counter += 1
 

@@ -74,3 +74,7 @@ def convert_custom_field_type(field_type, value):
         return int(value)
 
     return value
+
+
+def json_dump(data, file):
+    json.dump(data, file, indent=2, sort_keys=True)

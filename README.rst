@@ -131,13 +131,23 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-08-28 [dev]:**
+
+* Added
+    * Custom field type converter
+* Fix
+    * Add versions from issue milestones
+    * Export users which are involve in Bugs
+    * Attachment filename reference
+    * Tags export
+
 **2018-08-23 [dev]:**
 
 * Changed:
     * Exit gracefully on KeyboardInterrupt exception
 * Added
     * Launchpad milestones to JIRA fixedVersions mapping
-* fix
+* Fix
     * Missing versions list
 
 **2018-07-15 [dev]:**

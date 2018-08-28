@@ -9,12 +9,11 @@ def create_attachments(bug):
     attachments = []
     for attachment in bug.attachments:
         f_in = attachment.data.open()
-        filename = os.path.normpath('%s/%s_%s' % (config['local']['attachments'],
-                                                  bug.id, f_in.filename))
+        f_name = f'{bug.id}_{f_in.filename}'
+        filename = os.path.normpath(os.path.join(config['local']['attachments'], f_name))
 
         if os.path.exists(filename):
-            logging.debug('Attachment %s_%s already exists, '
-                         'skipping: %s' % (bug.id, f_in.filename, filename))
+            logging.debug(f'Attachment {f_name} already exists, skipping: "{filename}"')
         else:
             with open(filename, 'wb') as f_out:
                 while True:
@@ -23,11 +22,11 @@ def create_attachments(bug):
                         f_out.write(buff)
                     else:
                         break
-            logging.debug('Attachment %s_%s export success' % (bug.id, f_in.filename))
+            logging.debug(f'Attachment {f_name} export success')
             attachments.append({
                 'name': f_in.filename,
                 'attacher': attachment.message.owner.display_name,
                 'created': attachment.message.date_created.isoformat(),
-                'uri': '%s/%s' % (config['jira']['attachments_url'].rstrip('/'), f_in.filename)
+                'uri': f'{config["jira"]["attachments_url"].rstrip("/")}/{f_name}'
             })
     return attachments

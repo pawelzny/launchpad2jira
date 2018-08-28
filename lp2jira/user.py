@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
 import logging
 import os
 
@@ -7,7 +6,7 @@ from tqdm import tqdm
 
 from lp2jira.config import config, lp
 from lp2jira.export import Export
-from lp2jira.utils import get_user_groups, clean_id
+from lp2jira.utils import clean_id, get_user_groups, json_dump
 
 
 class User:
@@ -31,15 +30,16 @@ class User:
                    email=email, user_groups=get_user_groups())
 
     def export(self):
-        filename = os.path.normpath('%s/%s_user.json' % (config['local']['users'], self.name))
+        filename = os.path.normpath(os.path.join(config["local"]["users"],
+                                                 f'{self.name} [{self.display_name}].json'))
         if os.path.exists(filename):
-            logging.debug('User %s already exists, skipping: %s' % (self.name, filename))
+            logging.debug(f'User {self.display_name} already exists, skipping: "{filename}"')
             return True
 
         with open(filename, 'w') as f:
-            json.dump(self._dump(), f)
+            json_dump(self._dump(), f)
 
-        logging.debug('User %s export success' % self.name)
+        logging.debug(f'User User {self.display_name} export success')
         return True
 
     def _dump(self):
@@ -73,4 +73,4 @@ class ExportSubscribers(ExportUser):
             if super().run(username=clean_id(sub.subscriber_link)):
                 counter += 1
 
-        logging.info(f'Exported users: {counter}/{len(subscriptions)}')
+        logging.info(f'Exported subscribers: {counter}/{len(subscriptions)}')
