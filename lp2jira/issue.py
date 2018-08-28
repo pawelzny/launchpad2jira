@@ -224,7 +224,7 @@ class ExportBugs(ExportBug):
                               'Private', 'Proprietary', 'Embargoed'])
 
         counter = 0
-        for task in tqdm(bug_tasks[3:10], desc='Export issues'):
+        for task in tqdm(bug_tasks, desc='Export issues'):
             if super().run(task=task, bug=task.bug, releases=get_releases(project)):
                 counter += 1
 
