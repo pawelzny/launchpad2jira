@@ -135,6 +135,7 @@ History
 
 * Added
     * Custom field type converter
+    * Link duplicated issues
 * Fix
     * Add versions from issue milestones
     * Export users which are involve in Bugs

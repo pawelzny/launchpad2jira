@@ -91,7 +91,7 @@ class Bug(Issue):
 
     def __init__(self, issue_id, status, owner, assignee, title, desc, priority, tags,
                  created, updated, comments, history, affected_versions, attachments, sub_tasks,
-                 links, releases, custom_fields, fixed_versions):
+                 links, releases, custom_fields, fixed_versions, duplicates):
         super().__init__(issue_id, status, owner, assignee, title, desc, tags,
                          priority, created, custom_fields, affected_versions)
 
@@ -103,12 +103,17 @@ class Bug(Issue):
         self.sub_tasks = sub_tasks
         self.links = links
         self.releases = releases
+        self.duplicates = duplicates
 
     @classmethod
     def create(cls, task, bug, releases):
         comments = [{'body': c.content,
                      'created': c.date_created.isoformat(),
                      'author': clean_id(c.owner_link)} for c in bug.messages]
+
+        duplicates = [{'name': 'Duplicate',
+                       'sourceId': str(d.id),
+                       'destinationId': str(d.id)} for d in task.bug.duplicates]
 
         sub_tasks = []
         affected_versions = []
@@ -155,7 +160,7 @@ class Bug(Issue):
                    tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments, history=[],
                    affected_versions=affected_versions, attachments=create_attachments(bug),
-                   sub_tasks=sub_tasks, links=links, releases=releases,
+                   sub_tasks=sub_tasks, links=links, releases=releases, duplicates=duplicates,
                    custom_fields=custom_fields, fixed_versions=fixed_versions)
 
     def export(self):
@@ -175,7 +180,7 @@ class Bug(Issue):
         export_bug = bug_template()
         export_bug['projects'][0]['versions'] = all_versions
         export_bug['projects'][0]['issues'] = [self._dump()] + [s._dump() for s in self.sub_tasks]
-        export_bug['links'] = self.links
+        export_bug['links'] = self.links + self.duplicates
 
         with open(filename, 'w') as f:
             json_dump(export_bug, f)
