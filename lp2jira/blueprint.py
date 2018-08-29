@@ -39,10 +39,8 @@ class Blueprint(Issue):
     def export(self):
         self._export_related_users()
 
-        filename = os.path.normpath(os.path.join(
-            config["local"]["issues"],
-            f'{self.issue_id} [{self.title}].json'.replace('/', '|')
-        ))
+        filename = os.path.normpath(os.path.join(config["local"]["issues"],
+                                                 f'{self.issue_id}.json'))
         if os.path.exists(filename):
             logging.debug(f'Blueprint {self.issue_id} already exists, skipping: "{filename}"')
             return True
@@ -71,10 +69,16 @@ class ExportBlueprints(ExportBlueprint):
         soup = BeautifulSoup(res.text, 'html.parser')
         specs = soup.find_all(href=lambda x: x and re.compile('\+spec/').search(x))
 
+        failed_specs = []
         counter = 0
-        for a in tqdm(specs, desc='Export blueprints'):
-            name = a.get('href').split('/')[-1]
+        for index, spec in enumerate(tqdm(specs, desc='Export blueprints')):
+            name = spec.get('href').split('/')[-1]
             if super().run(name=name):
                 counter += 1
+            else:
+                failed_specs.append(f'index: {index}, name: {name}')
 
         logging.info(f'Exported blueprints: {counter}/{len(specs)}')
+        if failed_specs:
+            fail_log = '\n'.join(failed_specs)
+            logging.info(f'Failed blueprints:\n{fail_log}')

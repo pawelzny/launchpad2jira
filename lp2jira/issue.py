@@ -115,6 +115,9 @@ class Bug(Issue):
                        'sourceId': str(d.id),
                        'destinationId': str(d.id)} for d in task.bug.duplicates]
 
+        custom_fields = Issue.create_custom_fields(task)
+        custom_fields.extend(Issue.create_custom_fields(bug))
+
         sub_tasks = []
         affected_versions = []
         tags = bug.tags
@@ -132,8 +135,8 @@ class Bug(Issue):
                                    assignee=task.assignee,
                                    title=f'[{version}] {bug.title}',
                                    desc=bug.description, priority=task.importance,
-                                   created=activity.datechanged.isoformat(),
-                                   custom_fields=[], affected_versions=[version], tags=tags)
+                                   created=activity.datechanged.isoformat(), tags=tags,
+                                   custom_fields=custom_fields, affected_versions=[version])
                 sub_tasks.append(sub_task)
                 links.append({
                     'name': 'sub-task-link',
@@ -147,9 +150,6 @@ class Bug(Issue):
             if activity.whatchanged == 'bug task deleted':
                 version = activity.oldvalue.split('/')[-1]
                 sub_tasks = [s for s in sub_tasks if s.title != f'[{version}] {bug.title}']
-
-        custom_fields = Issue.create_custom_fields(task)
-        custom_fields.extend(Issue.create_custom_fields(bug))
 
         fixed_versions = []
         if task.milestone_link:
@@ -166,10 +166,8 @@ class Bug(Issue):
     def export(self):
         self._export_related_users()
 
-        filename = os.path.normpath(os.path.join(
-            config["local"]["issues"],
-            f'{self.issue_id} [{self.title}].json'.replace('/', '|')
-        ))
+        filename = os.path.normpath(os.path.join(config["local"]["issues"],
+                                                 f'{self.issue_id}.json'))
         if os.path.exists(filename):
             logging.debug(f'Bug {self.issue_id} already exists, skipping: "{filename}"')
             return True
@@ -234,9 +232,16 @@ class ExportBugs(ExportBug):
             information_type=['Public', 'Public Security', 'Private Security',
                               'Private', 'Proprietary', 'Embargoed'])
 
+        failed_issues = []
         counter = 0
-        for task in tqdm(bug_tasks, desc='Export issues'):
-            if super().run(task=task, bug=task.bug, releases=get_releases(project)):
+        for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
+            bug = task.bug
+            if super().run(task=task, bug=bug, releases=get_releases(project)):
                 counter += 1
+            else:
+                failed_issues.append(f'index: {index}, id: {bug.id}')
 
         logging.info(f'Exported issues: {counter}/{len(bug_tasks)}')
+        if failed_issues:
+            fail_log = '\n'.join(failed_issues)
+            logging.info(f'Failed issues:\n{fail_log}')

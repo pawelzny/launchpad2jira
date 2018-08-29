@@ -116,7 +116,7 @@ Run Export
 
 Execute `LaunchpadExport.py` file.
 
-.. code-block::
+.. code-block:: console
 
     ./LaunchpadExport.py
 
@@ -131,12 +131,20 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-08-29:**
+
+* Added
+    * Custom fields for SubTasks
+    * Logging failed exports in summary
+* Fixed
+    * Issue file name too long
+
 **2018-08-28 [dev]:**
 
 * Added
     * Custom field type converter
     * Link duplicated issues
-* Fix
+* Fixed
     * Add versions from issue milestones
     * Export users which are involve in Bugs
     * Attachment filename reference
@@ -148,33 +156,35 @@ History
     * Exit gracefully on KeyboardInterrupt exception
 * Added
     * Launchpad milestones to JIRA fixedVersions mapping
-* Fix
+* Fixed
     * Missing versions list
 
 **2018-07-15 [dev]:**
 
-* support for custom fields
-* configurable issues type
+* Added
+    * support for custom fields
+    * configurable issues type
 
 **2018-06-28 [dev]:**
 
-* **Export issues (bugs)**
-    * comments
-    * attachments
-    * status mapping
-    * priority mapping
-    * sub-tasks based on affected branches
-* **Export blueprints**
-    * status mapping
-    * priority mapping
-    * reporter and assignee
-    * description, whiteboard, work items
-* **Export users**
-    * subscribed to project
-    * commenter
-    * assignee
-    * reporter
-* **Export releases**
+* Added
+    * **Export issues (bugs)**
+        * comments
+        * attachments
+        * status mapping
+        * priority mapping
+        * sub-tasks based on affected branches
+    * **Export blueprints**
+        * status mapping
+        * priority mapping
+        * reporter and assignee
+        * description, whiteboard, work items
+    * **Export users**
+        * subscribed to project
+        * commenter
+        * assignee
+        * reporter
+    * **Export releases**
 
 
 LICENSE
