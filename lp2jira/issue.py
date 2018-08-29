@@ -33,7 +33,7 @@ class Issue:
     def __init__(self, issue_id, status, owner, assignee, title, desc, tags,
                  priority, created, custom_fields, affected_versions):
         self.issue_id = str(issue_id)
-        self.status = translate_status(status)
+        self.status = status
         self.owner = owner
         self.assignee = assignee or None
         self.title = title
@@ -131,7 +131,8 @@ class Bug(Issue):
                 version = activity.newvalue.split('/')[-1]
 
                 sub_task = SubTask(issue_id=f'{bug.id}/{len(sub_tasks) + 1}',
-                                   status=task.status, owner=get_owner(activity.person_link),
+                                   status=translate_status(task.status),
+                                   owner=get_owner(activity.person_link),
                                    assignee=task.assignee,
                                    title=f'[{version}] {bug.title}',
                                    desc=bug.description, priority=task.importance,
@@ -155,9 +156,9 @@ class Bug(Issue):
         if task.milestone_link:
             fixed_versions.append(task.milestone.name)
 
-        return cls(issue_id=bug.id, status=task.status, owner=bug.owner, assignee=task.assignee,
-                   title=bug.title, desc=bug.description, priority=task.importance,
-                   tags=tags, created=task.date_created.isoformat(),
+        return cls(issue_id=bug.id, status=translate_status(task.status), owner=bug.owner,
+                   assignee=task.assignee, title=bug.title, desc=bug.description,
+                   priority=task.importance, tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments, history=[],
                    affected_versions=affected_versions, attachments=create_attachments(bug),
                    sub_tasks=sub_tasks, links=links, releases=releases, duplicates=duplicates,

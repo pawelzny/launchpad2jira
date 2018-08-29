@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
 
 from lp2jira.config import config, lp
 
@@ -30,6 +31,31 @@ def translate_priority(priority):
         return mapping[priority.title()]
     except KeyError:
         return priority
+
+
+def translate_blueprint_status(spec):
+    with open(config['mapping']['blueprint'], 'r') as f:
+        mapping = json.load(f)
+
+    for mapp in mapping:
+        result = []
+        for condition, value in mapp['conditions'].items():
+            try:
+                if isinstance(value, str):
+                    value = value.lower()
+
+                spec_v = getattr(spec, condition)
+                if isinstance(spec_v, str):
+                    spec_v = spec_v.lower()
+
+                result.append(value == spec_v)
+            except AttributeError as exc:
+                logging.error(f'Blueprint do not have attribute: "{condition}"')
+                logging.exception(exc)
+        if all(result):
+            return mapp['status']
+    logging.error(f'Status cannot be mapped to blueprint: {spec.title}')
+    return config['mapping']['blueprint_default']
 
 
 def bug_template():

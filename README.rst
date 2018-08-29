@@ -66,6 +66,9 @@ The most important configuration you have to change are:
     attachments_url = http://localhost/attachments/
 
     [mapping]
+    # Blueprint default status
+    blueprint_default = New
+
     # Launchpad Bug task to JIRA issue_type conversion.
     # Bug is a main task you can find in Launchpad.
     bug_type = Bug
@@ -89,6 +92,16 @@ This file provides mapping between issues statuses from Launchpad to JIRA.
 All *keys* are statuses from Launchpad, and *values* are statuses from JIRA.
 
 Values must be exact names of statuses from JIRA.
+You can check on http://<my-jira.com>/secure/admin/ViewStatuses.jspa
+
+Issue status mapping for blueprints
+-----------------------------------
+
+Edit `mapping/lp2jira_blueprint.json` file.
+This file provides mapping between issues statuses from Launchpad to JIRA.
+All conditions are check one by one and first match wins.
+
+Status value must be exact name of status defined in JIRA.
 You can check on http://<my-jira.com>/secure/admin/ViewStatuses.jspa
 
 Importance to priority mapping
@@ -136,6 +149,7 @@ History
 * Added
     * Custom fields for SubTasks
     * Logging failed exports in summary
+    * Status for Blueprints from multiple custom fields
 * Fixed
     * Issue file name too long
 

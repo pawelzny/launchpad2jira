@@ -10,7 +10,7 @@ from tqdm import tqdm
 from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.issue import Issue
-from lp2jira.utils import bug_template, json_dump, translate_status
+from lp2jira.utils import bug_template, json_dump, translate_blueprint_status
 
 
 class Blueprint(Issue):
@@ -21,13 +21,7 @@ class Blueprint(Issue):
         project = lp.projects[config['launchpad']['project']]
         spec = project.getSpecification(name=name)
 
-        if spec.is_complete:
-            status = translate_status('Fix Released')
-        elif spec.is_started and not spec.is_complete:
-            status = translate_status('In Progress')
-        else:
-            status = translate_status('New')
-
+        status = translate_blueprint_status(spec)
         description = f'{spec.summary}\n\n{spec.whiteboard}\n\n{spec.workitems_text}'
         custom_fields = Issue.create_custom_fields(spec)
         # TODO: issue type can't be hardcoded
