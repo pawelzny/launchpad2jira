@@ -8,4 +8,4 @@ config.read('export.cfg')
 
 lp = Launchpad.login_with('LP2JIRA', config['launchpad']['service'],
                           launchpadlib_dir=config['launchpad']['cache_dir'],
-                          version='devel')
+                          version='devel', credentials_file='token')

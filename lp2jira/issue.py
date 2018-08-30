@@ -232,12 +232,13 @@ class ExportBugs(ExportBug):
                     'Incomplete (with response)', 'Incomplete (without response)'],
             information_type=['Public', 'Public Security', 'Private Security',
                               'Private', 'Proprietary', 'Embargoed'])
+        releases = get_releases(project)
 
         failed_issues = []
         counter = 0
         for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
             bug = task.bug
-            if super().run(task=task, bug=bug, releases=get_releases(project)):
+            if super().run(task=task, bug=bug, releases=releases):
                 counter += 1
             else:
                 failed_issues.append(f'index: {index}, id: {bug.id}')

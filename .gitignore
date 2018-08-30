@@ -76,3 +76,4 @@ out/
 
 # Logging
 *.log
+/token

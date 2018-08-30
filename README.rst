@@ -144,6 +144,11 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-08-30:**
+
+* Fixed
+    * White characters in attachment file names
+
 **2018-08-29:**
 
 * Added

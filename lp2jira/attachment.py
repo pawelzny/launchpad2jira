@@ -9,7 +9,7 @@ def create_attachments(bug):
     attachments = []
     for attachment in bug.attachments:
         f_in = attachment.data.open()
-        f_name = f'{bug.id}_{f_in.filename}'
+        f_name = f'{bug.id}_{f_in.filename}'.replace(' ', '_')
         filename = os.path.normpath(os.path.join(config['local']['attachments'], f_name))
 
         if os.path.exists(filename):
