@@ -132,7 +132,12 @@ class Bug(Issue):
         affected_versions = []
         tags = bug.tags
         links = []
+        last_etag = ""
         for activity in bug.activity:
+            if last_etag == activity.http_etag:
+                continue
+            last_etag = activity.http_etag
+
             if activity.whatchanged == 'nominated for series':
                 version = activity.newvalue.split('/')[-1]
                 affected_versions.append(version)
