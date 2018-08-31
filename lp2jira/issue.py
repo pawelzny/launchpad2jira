@@ -83,7 +83,7 @@ class Issue:
         issue = {
             'externalId': self.issue_id,
             'status': self.status,
-            'reporter': self.owner.display_name,
+            'reporter': self.owner.name,
             'summary': self.title,
             'description': self.desc,
             'priority': self.priority,
@@ -92,7 +92,7 @@ class Issue:
             'labels': list(self.tags),
         }
         if self.assignee:
-            issue['assignee'] = self.assignee.display_name
+            issue['assignee'] = self.assignee.name
         if self.custom_fields:
             issue['customFieldValues'] = self.custom_fields
         return issue

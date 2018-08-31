@@ -152,6 +152,7 @@ History
 
 * Fixed
     * Include affected versions in SubTasks
+    * Use username in Reporter, Assignee fields
 
 **2018-08-30:**
 
