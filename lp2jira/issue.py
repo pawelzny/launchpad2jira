@@ -119,9 +119,7 @@ class Bug(Issue):
 
     @classmethod
     def create(cls, task, bug, releases):
-        comments = [{'body': c.content,
-                     'created': c.date_created.isoformat(),
-                     'author': clean_id(c.owner_link)} for c in bug.messages]
+        comments = cls._collect_comments(bug.messages)
 
         duplicates = [{'name': 'Duplicate',
                        'sourceId': str(d.id),
@@ -226,6 +224,19 @@ class Bug(Issue):
             except Exception as exc:
                 logging.exception(exc)
 
+    @classmethod
+    def _collect_comments(cls, messages):
+        comments = []
+        shared_etag = ""
+        for comment in messages:
+            new_etag = comment.http_etag.split('-')[1]
+            if shared_etag != new_etag:
+                comments.append({'body': comment.content,
+                                 'created': comment.date_created.isoformat(),
+                                 'author': clean_id(comment.owner_link)})
+                shared_etag = new_etag
+        return comments
+
 
 class SubTask(Issue):
     issue_type = config['mapping']['sub_task_type']
@@ -254,7 +265,7 @@ class ExportBugs(ExportBug):
         for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
             bug = task.bug
             if Issue.exists(bug.id):
-                counter +=1
+                counter += 1
                 continue
 
             if super().run(task=task, bug=bug, releases=releases):
