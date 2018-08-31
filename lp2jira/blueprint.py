@@ -33,9 +33,8 @@ class Blueprint(Issue):
     def export(self):
         self._export_related_users()
 
-        filename = os.path.normpath(os.path.join(config["local"]["issues"],
-                                                 f'{self.issue_id}.json'))
-        if os.path.exists(filename):
+        filename = self.filename(self.issue_id)
+        if self.exists(filename):
             logging.debug(f'Blueprint {self.issue_id} already exists, skipping: "{filename}"')
             return True
 

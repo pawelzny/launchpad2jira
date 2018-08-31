@@ -29,10 +29,17 @@ class User:
         return cls(name=username, display_name=lp_user.display_name,
                    email=email, user_groups=get_user_groups())
 
+    @staticmethod
+    def filename(username):
+        return os.path.normpath(os.path.join(config["local"]["users"], f'{username}.json'))
+
+    @staticmethod
+    def exists(username):
+        return os.path.exists(User.filename(username))
+
     def export(self):
-        filename = os.path.normpath(os.path.join(config["local"]["users"],
-                                                 f'{self.name} [{self.display_name}].json'))
-        if os.path.exists(filename):
+        filename = self.filename(self.name)
+        if self.exists(filename):
             logging.debug(f'User {self.display_name} already exists, skipping: "{filename}"')
             return True
 
@@ -70,7 +77,12 @@ class ExportSubscribers(ExportUser):
 
         counter = 0
         for sub in tqdm(subscriptions, desc='Export subscribers'):
-            if super().run(username=clean_id(sub.subscriber_link)):
+            username = clean_id(sub.subscriber_link)
+            if User.exists(username):
+                counter += 1
+                continue
+
+            if super().run(username):
                 counter += 1
 
         logging.info(f'Exported subscribers: {counter}/{len(subscriptions)}')

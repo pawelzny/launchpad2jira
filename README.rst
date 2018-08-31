@@ -144,6 +144,11 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-08-31:**
+
+* Changed
+    * Skip existing files before querying API
+
 **2018-08-30:**
 
 * Fixed

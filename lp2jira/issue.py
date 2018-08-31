@@ -7,7 +7,7 @@ from tqdm import tqdm
 from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
 from lp2jira.export import Export
-from lp2jira.user import ExportUser
+from lp2jira.user import ExportUser, User
 from lp2jira.utils import (bug_template, clean_id, convert_custom_field_type, get_custom_fields,
                            get_owner, json_dump, translate_priority, translate_status)
 
@@ -47,12 +47,16 @@ class Issue:
 
     def _export_related_users(self):
         try:
-            self.export_user(username=clean_id(self.owner.name))
+            username = clean_id(self.owner.name)
+            if not User.exists(username):
+                self.export_user(username)
         except Exception as exc:
             logging.exception(exc)
         try:
             if self.assignee:
-                self.export_user(username=clean_id(self.assignee.name))
+                username = clean_id(self.assignee.name)
+                if not User.exists(username):
+                    self.export_user(username)
         except Exception as exc:
             logging.exception(exc)
 
@@ -66,6 +70,14 @@ class Issue:
                     val['value'] = convert_custom_field_type(val['fieldType'], lp_val)
                     customs.append(val)
         return customs
+
+    @staticmethod
+    def filename(issue_id):
+        return os.path.normpath(os.path.join(config["local"]["issues"], f'{issue_id}.json'))
+
+    @staticmethod
+    def exists(issue_id):
+        return os.path.exists(Issue.filename(issue_id))
 
     def _dump(self):
         issue = {
@@ -167,9 +179,8 @@ class Bug(Issue):
     def export(self):
         self._export_related_users()
 
-        filename = os.path.normpath(os.path.join(config["local"]["issues"],
-                                                 f'{self.issue_id}.json'))
-        if os.path.exists(filename):
+        filename = self.filename(self.issue_id)
+        if self.exists(self.issue_id):
             logging.debug(f'Bug {self.issue_id} already exists, skipping: "{filename}"')
             return True
 
@@ -201,13 +212,17 @@ class Bug(Issue):
         super()._export_related_users()
         for comment in self.comments:
             try:
-                self.export_user(username=clean_id(comment['author']))
+                username = clean_id(comment['author'])
+                if not User.exists(username):
+                    self.export_user(username)
             except Exception as exc:
                 logging.exception(exc)
 
         for sub_task in self.sub_tasks:
             try:
-                self.export_user(username=clean_id(sub_task.owner.name))
+                username = clean_id(sub_task.owner.name)
+                if not User.exists(username):
+                    self.export_user(username)
             except Exception as exc:
                 logging.exception(exc)
 
@@ -238,6 +253,10 @@ class ExportBugs(ExportBug):
         counter = 0
         for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
             bug = task.bug
+            if Issue.exists(bug.id):
+                counter +=1
+                continue
+
             if super().run(task=task, bug=bug, releases=releases):
                 counter += 1
             else:
