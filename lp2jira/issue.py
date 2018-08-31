@@ -246,6 +246,11 @@ class Bug(Issue):
 class SubTask(Issue):
     issue_type = config['mapping']['sub_task_type']
 
+    def _dump(self):
+        issue = super()._dump()
+        issue.update({'affectedVersions': self.affected_versions})
+        return issue
+
 
 class ExportBug(Export):
     def __init__(self):

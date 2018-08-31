@@ -148,6 +148,10 @@ History
 
 * Changed
     * Skip existing files before querying API
+    * Remove duplicated comments and SubTasks
+
+* Fixed
+    * Include affected versions in SubTasks
 
 **2018-08-30:**
 
