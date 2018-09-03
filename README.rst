@@ -144,6 +144,12 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-09-03**
+
+* Fixed
+    * Spaces in attachment's name, username in attacher
+    * Leaving links to deleted subtasks
+
 **2018-08-31:**
 
 * Changed

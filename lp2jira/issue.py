@@ -131,7 +131,6 @@ class Bug(Issue):
         sub_tasks = []
         affected_versions = []
         tags = bug.tags
-        links = []
         last_etag = ""
         for activity in bug.activity:
             if last_etag == activity.http_etag:
@@ -154,11 +153,6 @@ class Bug(Issue):
                                    created=activity.datechanged.isoformat(), tags=tags,
                                    custom_fields=custom_fields, affected_versions=[version])
                 sub_tasks.append(sub_task)
-                links.append({
-                    'name': 'sub-task-link',
-                    'sourceId': sub_task.issue_id,
-                    'destinationId': str(bug.id),
-                })
 
             if activity.whatchanged == 'tags':
                 tags.extend(activity.newvalue.split())
@@ -166,6 +160,14 @@ class Bug(Issue):
             if activity.whatchanged == 'bug task deleted':
                 version = activity.oldvalue.split('/')[-1]
                 sub_tasks = [s for s in sub_tasks if s.title != f'[{version}] {bug.title}']
+
+        links = []
+        for sub_task in sub_tasks:
+            links.append({
+                'name': 'sub-task-link',
+                'sourceId': sub_task.issue_id,
+                'destinationId': str(bug.id),
+            })
 
         fixed_versions = []
         if task.milestone_link:

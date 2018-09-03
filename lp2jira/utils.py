@@ -104,3 +104,9 @@ def convert_custom_field_type(field_type, value):
 
 def json_dump(data, file):
     json.dump(data, file, indent=2, sort_keys=True)
+
+
+def prepare_attachment_name(name):
+    for old in [':', ' ']:
+        name = name.replace(old, '_')
+    return name
