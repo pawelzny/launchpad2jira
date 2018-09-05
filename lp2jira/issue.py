@@ -122,8 +122,8 @@ class Bug(Issue):
         comments = cls._collect_comments(bug.messages)
 
         duplicates = [{'name': 'Duplicate',
-                               'sourceId': str(d.id),
-                               'destinationId': str(bug.id)} for d in bug.duplicates]
+                       'sourceId': str(d.id),
+                       'destinationId': str(bug.id)} for d in bug.duplicates]
 
         custom_fields = Issue.create_custom_fields(task)
         custom_fields.extend(Issue.create_custom_fields(bug))
