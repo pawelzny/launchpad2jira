@@ -144,6 +144,11 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-09-05**
+
+* Fixed
+    * Exporting duplicated issues
+
 **2018-09-03**
 
 * Fixed

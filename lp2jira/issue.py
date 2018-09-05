@@ -122,8 +122,8 @@ class Bug(Issue):
         comments = cls._collect_comments(bug.messages)
 
         duplicates = [{'name': 'Duplicate',
-                       'sourceId': str(d.id),
-                       'destinationId': str(d.id)} for d in task.bug.duplicates]
+                               'sourceId': str(d.id),
+                               'destinationId': str(bug.id)} for d in bug.duplicates]
 
         custom_fields = Issue.create_custom_fields(task)
         custom_fields.extend(Issue.create_custom_fields(bug))
@@ -269,7 +269,8 @@ class ExportBugs(ExportBug):
                     'Confirmed', 'Triaged', 'In Progress', 'Fix Committed', 'Fix Released',
                     'Incomplete (with response)', 'Incomplete (without response)'],
             information_type=['Public', 'Public Security', 'Private Security',
-                              'Private', 'Proprietary', 'Embargoed'])
+                              'Private', 'Proprietary', 'Embargoed'],
+            omit_duplicates=False)
         releases = get_releases(project)
 
         failed_issues = []
