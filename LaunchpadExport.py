@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+import argparse
 import logging
 import os
 import sys
@@ -7,7 +8,7 @@ import sys
 from lp2jira.config import config
 
 
-def main():
+def main(export_bugs=True, export_blueprints=True):
     from lp2jira.blueprint import ExportBlueprints
     from lp2jira.export import ExportCompile
     from lp2jira.issue import ExportBugs
@@ -15,8 +16,10 @@ def main():
 
     logging.info('===== Export start =====')
     ExportSubscribers().run()
-    ExportBugs().run()
-    ExportBlueprints().run()
+    if export_bugs:
+        ExportBugs().run()
+    if export_blueprints:
+        ExportBlueprints().run()
     logging.info('===== Compile export file =====')
     ExportCompile().run()
     logging.info('===== Export complete =====')
@@ -31,8 +34,20 @@ if __name__ == '__main__':
         if not os.path.exists(directory):
             os.mkdir(directory)
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--only-bugs', help='Export only bugs', action='store_true')
+    parser.add_argument('--only-blueprints', help='Export only blueprints', action='store_true')
+    args = parser.parse_args()
+
     try:
-        main()
+        if args.only_bugs and args.only_blueprints:
+            raise Exception('You can use only one of --only-bugs or --only-blueprints')
+        if args.only_bugs:
+            main(export_blueprints=False)
+        elif args.only_blueprints:
+            main(export_bugs=False)
+        else:
+            main()
     except KeyboardInterrupt:
         msg = "Export has been stopped by user"
         print(msg)
