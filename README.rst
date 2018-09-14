@@ -149,12 +149,12 @@ History
 **2018-09-14**
 
 * Changed
-    ** Export subtasks related only to acctual project
-    ** Export history of labels and assignee changes
+    * Export subtasks related only to acctual project
+    * Export history of labels and assignee changes
 
 * Fixed
-    ** Get fixedVersions from subtasks
-    ** Remove duplication of labels
+    * Get fixedVersions from subtasks
+    * Remove duplication of labels
 
 **2018-09-05**
 
