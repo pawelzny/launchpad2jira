@@ -8,8 +8,10 @@ from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.user import ExportUser, User
-from lp2jira.utils import (bug_template, clean_id, convert_custom_field_type, get_custom_fields,
-                           get_owner, json_dump, translate_priority, translate_status)
+from lp2jira.utils import (bug_template, clean_id, convert_custom_field_type,
+                           get_custom_fields, get_owner,
+                           get_user_data_from_activity_changed, json_dump,
+                           translate_priority, translate_status)
 
 
 def get_releases(project):
@@ -131,14 +133,44 @@ class Bug(Issue):
         sub_tasks = []
         affected_versions = []
         tags = bug.tags
-        last_etag = ""
+        subtask_history = {}
+        history = []
         for activity in bug.activity:
-            if last_etag == activity.http_etag:
-                continue
-            last_etag = activity.http_etag
-
             if activity.whatchanged == 'tags':
-                tags.extend(activity.newvalue.split())
+                history.append({
+                    'author': get_owner(activity.person_link).name,
+                    'created': activity.datechanged.isoformat(),
+                    'items': [{
+                        'fieldType': 'jira',
+                        'field': 'labels',
+                        'from': None,
+                        'fromString': activity.oldvalue,
+                        'to': None,
+                        'toString': activity.newvalue
+                    }]
+                })
+
+            if 'assignee' in activity.whatchanged:
+                subtask_target = activity.whatchanged.split(':')[0]
+
+                if not subtask_target in subtask_history:
+                    subtask_history[subtask_target] = []
+
+                old_display, old_name = get_user_data_from_activity_changed(activity.oldvalue)
+                new_display, new_name = get_user_data_from_activity_changed(activity.newvalue)
+
+                subtask_history[subtask_target].append({
+                    'author': get_owner(activity.person_link).name,
+                    'created': activity.datechanged.isoformat(),
+                    'items': [{
+                        'fieldType': 'jira',
+                        'field': 'assignee',
+                        'from': old_name,
+                        'fromString': old_display,
+                        'to': new_name,
+                        'toString': new_display
+                    }]
+                })
 
         links = []
         fixed_versions = []
@@ -154,7 +186,8 @@ class Bug(Issue):
                                    title=f'[{bug_task.bug_target_name}] {bug_task.title}',
                                    desc=bug.description, priority=bug_task.importance,
                                    created=bug_task.date_created.isoformat(), tags=tags,
-                                   custom_fields=custom_fields, affected_versions=[version])
+                                   custom_fields=custom_fields, affected_versions=[version],
+                                   history=subtask_history.get(bug_task.bug_target_name, []))
                 sub_tasks.append(sub_task)
 
                 if bug_task.milestone_link:
@@ -172,7 +205,8 @@ class Bug(Issue):
         return cls(issue_id=bug.id, status=translate_status(task.status), owner=bug.owner,
                    assignee=task.assignee, title=bug.title, desc=bug.description,
                    priority=task.importance, tags=tags, created=task.date_created.isoformat(),
-                   updated=bug.date_last_updated.isoformat(), comments=comments, history=[],
+                   updated=bug.date_last_updated.isoformat(), comments=comments,
+                   history=history + subtask_history.get(config['launchpad']['project'], []),
                    affected_versions=affected_versions, attachments=create_attachments(bug),
                    sub_tasks=sub_tasks, links=links, releases=releases, duplicates=duplicates,
                    custom_fields=custom_fields, fixed_versions=fixed_versions)
@@ -244,9 +278,18 @@ class Bug(Issue):
 class SubTask(Issue):
     issue_type = config['mapping']['sub_task_type']
 
+    def __init__(self, issue_id, status, owner, assignee, title, desc, tags,
+                 priority, created, custom_fields, affected_versions, history):
+        super().__init__(issue_id, status, owner, assignee, title, desc, tags,
+                         priority, created, custom_fields, affected_versions)
+        self.history = history
+
     def _dump(self):
         issue = super()._dump()
-        issue.update({'affectedVersions': self.affected_versions})
+        issue.update({
+            'affectedVersions': self.affected_versions,
+            'history': self.history
+        })
         return issue
 
 
@@ -271,7 +314,7 @@ class ExportBugs(ExportBug):
 
         failed_issues = []
         counter = 0
-        for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
+        for index, task in enumerate(tqdm(bug_tasks[], desc='Export issues')):
             bug = task.bug
             if Issue.exists(bug.id):
                 counter += 1

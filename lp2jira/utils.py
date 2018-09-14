@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import logging
+import re
 
 from lp2jira.config import config, lp
 
@@ -110,3 +111,11 @@ def prepare_attachment_name(name):
     for old in [':', ' ']:
         name = name.replace(old, '_')
     return name
+
+
+def get_user_data_from_activity_changed(value):
+    if value is None:
+        return '', None
+
+    user_data = value.rsplit(' (', 1)
+    return user_data[0], user_data[1][:-1]
