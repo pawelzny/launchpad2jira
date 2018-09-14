@@ -137,39 +137,35 @@ class Bug(Issue):
                 continue
             last_etag = activity.http_etag
 
-            if activity.whatchanged == 'nominated for series':
-                version = activity.newvalue.split('/')[-1]
-                affected_versions.append(version)
-
-            if activity.whatchanged == 'bug task added':
-                version = activity.newvalue.split('/')[-1]
-
-                sub_task = SubTask(issue_id=f'{bug.id}/{len(sub_tasks) + 1}',
-                                   status=translate_status(task.status),
-                                   owner=get_owner(activity.person_link),
-                                   assignee=task.assignee,
-                                   title=f'[{version}] {bug.title}',
-                                   desc=bug.description, priority=task.importance,
-                                   created=activity.datechanged.isoformat(), tags=tags,
-                                   custom_fields=custom_fields, affected_versions=[version])
-                sub_tasks.append(sub_task)
-
             if activity.whatchanged == 'tags':
                 tags.extend(activity.newvalue.split())
 
-            if activity.whatchanged == 'bug task deleted':
-                version = activity.oldvalue.split('/')[-1]
-                sub_tasks = [s for s in sub_tasks if s.title != f'[{version}] {bug.title}']
-
         links = []
-        for sub_task in sub_tasks:
-            links.append({
-                'name': 'sub-task-link',
-                'sourceId': sub_task.issue_id,
-                'destinationId': str(bug.id),
-            })
-
         fixed_versions = []
+        for bug_task in bug.bug_tasks:
+            if bug_task.bug_target_name.startswith(f"{config['launchpad']['project']}/"):
+                version = bug_task.bug_target_name.split('/')[-1]
+                affected_versions.append(version)
+
+                sub_task = SubTask(issue_id=f'{bug.id}/{len(sub_tasks) + 1}',
+                                   status=translate_status(bug_task.status),
+                                   owner=bug_task.owner,
+                                   assignee=bug_task.assignee,
+                                   title=f'[{bug_task.bug_target_name}] {bug_task.title}',
+                                   desc=bug.description, priority=bug_task.importance,
+                                   created=bug_task.date_created.isoformat(), tags=tags,
+                                   custom_fields=custom_fields, affected_versions=[version])
+                sub_tasks.append(sub_task)
+
+                if bug_task.milestone_link:
+                    fixed_versions.append(bug_task.milestone.name)
+
+                links.append({
+                    'name': 'sub-task-link',
+                    'sourceId': sub_task.issue_id,
+                    'destinationId': str(bug.id),
+                })
+
         if task.milestone_link:
             fixed_versions.append(task.milestone.name)
 

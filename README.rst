@@ -133,6 +133,8 @@ Execute `LaunchpadExport.py` file.
 
     ./LaunchpadExport.py
 
+Optional arguments: `--only-bugs`, `--only-blueprints` to export only this part.
+
 Two directories will be created
 
 * `.lplib_cache` - used by launchpad library
@@ -143,6 +145,14 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 
 History
 =======
+
+**2018-09-14**
+
+* Changed
+    ** Export subtasks related only to acctual project
+
+* Fixed
+    ** Get fixedVersions from subtasks
 
 **2018-09-05**
 
