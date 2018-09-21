@@ -314,7 +314,7 @@ class ExportBugs(ExportBug):
 
         failed_issues = []
         counter = 0
-        for index, task in enumerate(tqdm(bug_tasks[], desc='Export issues')):
+        for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
             bug = task.bug
             if Issue.exists(bug.id):
                 counter += 1
