@@ -119,3 +119,12 @@ def get_user_data_from_activity_changed(value):
 
     user_data = value.rsplit(' (', 1)
     return user_data[0], user_data[1][:-1]
+
+
+def bug_id(bug_task, target_name=None):
+    if target_name is None:
+        bug_id = f"{bug_task.bug_target_name[:3]}/{bug_task.bug.id}"
+    else:
+        bug_id = f"{target_name[:3]}/{bug_task.id}"
+
+    return bug_id.upper()

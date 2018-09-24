@@ -146,6 +146,11 @@ Final JSON file will be in `<launchpad:project>_export/<launchpad:project>_expor
 History
 =======
 
+**2018-09-24**
+
+* Changed
+    * ExternalID unique between projects
+
 **2018-09-14**
 
 * Changed

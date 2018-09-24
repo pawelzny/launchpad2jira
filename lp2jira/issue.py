@@ -8,7 +8,7 @@ from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.user import ExportUser, User
-from lp2jira.utils import (bug_template, clean_id, convert_custom_field_type,
+from lp2jira.utils import (bug_id, bug_template, clean_id, convert_custom_field_type,
                            get_custom_fields, get_owner,
                            get_user_data_from_activity_changed, json_dump,
                            translate_priority, translate_status)
@@ -75,7 +75,8 @@ class Issue:
 
     @staticmethod
     def filename(issue_id):
-        return os.path.normpath(os.path.join(config["local"]["issues"], f'{issue_id}.json'))
+        name = f'{issue_id.replace("/", "_")}.json'
+        return os.path.normpath(os.path.join(config["local"]["issues"], name))
 
     @staticmethod
     def exists(issue_id):
@@ -124,8 +125,8 @@ class Bug(Issue):
         comments = cls._collect_comments(bug.messages)
 
         duplicates = [{'name': 'Duplicate',
-                       'sourceId': str(d.id),
-                       'destinationId': str(bug.id)} for d in bug.duplicates]
+                       'sourceId': bug_id(d, task.bug_target_name),
+                       'destinationId': bug_id(task)} for d in bug.duplicates]
 
         custom_fields = Issue.create_custom_fields(task)
         custom_fields.extend(Issue.create_custom_fields(bug))
@@ -179,7 +180,7 @@ class Bug(Issue):
                 version = bug_task.bug_target_name.split('/')[-1]
                 affected_versions.append(version)
 
-                sub_task = SubTask(issue_id=f'{bug.id}/{len(sub_tasks) + 1}',
+                sub_task = SubTask(issue_id=f'{bug_id(task)}/{len(sub_tasks) + 1}',
                                    status=translate_status(bug_task.status),
                                    owner=bug_task.owner,
                                    assignee=bug_task.assignee,
@@ -196,13 +197,22 @@ class Bug(Issue):
                 links.append({
                     'name': 'sub-task-link',
                     'sourceId': sub_task.issue_id,
-                    'destinationId': str(bug.id),
+                    'destinationId': bug_id(task)
+                })
+
+            elif (not '/' in bug_task.bug_target_name and
+                  bug_task.bug_target_name != config['launchpad']['project']):
+
+                links.append({
+                    'name': 'Related',
+                    'sourceId': bug_id(bug_task),
+                    'destinationId': bug_id(task)
                 })
 
         if task.milestone_link:
             fixed_versions.append(task.milestone.name)
 
-        return cls(issue_id=bug.id, status=translate_status(task.status), owner=bug.owner,
+        return cls(issue_id=bug_id(task), status=translate_status(task.status), owner=bug.owner,
                    assignee=task.assignee, title=bug.title, desc=bug.description,
                    priority=task.importance, tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments,
@@ -316,14 +326,14 @@ class ExportBugs(ExportBug):
         counter = 0
         for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
             bug = task.bug
-            if Issue.exists(bug.id):
+            if Issue.exists(bug_id(task)):
                 counter += 1
                 continue
 
             if super().run(task=task, bug=bug, releases=releases):
                 counter += 1
             else:
-                failed_issues.append(f'index: {index}, id: {bug.id}')
+                failed_issues.append(f'index: {index}, id: {bug_id(task)}')
 
         logging.info(f'Exported issues: {counter}/{len(bug_tasks)}')
         if failed_issues:
