@@ -1,9 +1,9 @@
 {
   "Critical": "Critical",
   "High": "Major",
-  "Medium": "High",
-  "Low": "Medium",
-  "Wishlist": "Low",
-  "Undecided": "Lowest",
-  "Undefined": "Lowest"
+  "Medium": "Minor",
+  "Low": "Trivial",
+  "Wishlist": "Trivial",
+  "Undecided": "Trivial",
+  "Undefined": "Trivial"
 }

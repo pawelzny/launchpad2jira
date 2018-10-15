@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+import json
+import requests
+import dateutil.parser
 
 from tqdm import tqdm
 
@@ -320,15 +323,13 @@ class ExportBugs(ExportBug):
             information_type=['Public', 'Public Security', 'Private Security',
                               'Private', 'Proprietary', 'Embargoed'],
             omit_duplicates=False)
-        releases = get_releases(project)
 
+        releases = get_releases(project)
         failed_issues = []
         counter = 0
+
         for index, task in enumerate(tqdm(bug_tasks, desc='Export issues')):
-            bug = task.bug
-            if Issue.exists(bug_id(task)):
-                counter += 1
-                continue
+            bug = task.bug 
 
             if super().run(task=task, bug=bug, releases=releases):
                 counter += 1
@@ -339,3 +340,137 @@ class ExportBugs(ExportBug):
         if failed_issues:
             fail_log = '\n'.join(failed_issues)
             logging.info(f'Failed issues:\n{fail_log}')
+
+class UpdateBugs:
+    def __init__(self):
+        self.username = config['jira']['username']
+        self.password = config['jira']['password']
+        self.server = config['jira']['server']
+        self.json_path = os.path.join(config['local']['export'], config['jira']['issues'])
+        self.update_path = os.path.join(config['local']['export'], config['jira']['update'])
+
+        with open(config['mapping']['custom_fields']) as f:
+            mapping = json.load(f)
+            self.id_cf_number = mapping['id']['fieldName'].split('_')[-1]                
+
+    def run(self):
+        with open(self.json_path, 'r') as f:
+            lp_issues = json.load(f)['projects'][0]['issues']
+
+        updated_issues = bug_template()
+
+        for index, lp_issue in enumerate(tqdm(lp_issues, desc="Update issues")):
+            external_id = lp_issue['externalId']
+            try:
+                cf_id = external_id.split('/')[1]
+            except IndexError:
+                cf_id = external_id
+
+            jira_search_result = self.search_jira_for_issue(cf_id)
+
+            if not jira_search_result['issues']:
+                updated_issues['projects'][0]['issues'].append(lp_issue)
+                continue
+
+            full_jira_issue = self.find_correct_issue(jira_search_result, external_id)
+            jira_project = full_jira_issue['projects'][0]
+            jira_issue = jira_project['issues'][0]
+
+
+            self.add_new(updated_issues['projects'][0]['versions'], jira_project['versions'])
+            self.add_new(updated_issues['users'], full_jira_issue['users'])
+
+            if not self.should_update(lp_issue, jira_issue):
+                continue
+
+            for key, value in jira_issue.items():
+                if key not in lp_issue:
+                    continue
+
+                if isinstance(value, list):
+                    if key == 'comments':
+                        jira_issue[key] = self.clear_comments(lp_issue[key],
+                                                              jira_issue[key])
+                    elif key == 'history':
+                        jira_issue[key] = self.clear_history(lp_issue[key],
+                                                             jira_issue[key])
+                    else:
+                        jira_issue[key] = lp_issue[key]
+                else:
+                    jira_issue[key] = lp_issue[key]
+
+            updated_issues['projects'][0]['issues'].append(jira_issue)
+
+        self.export_update(updated_issues)
+
+    def export_update(self, updated_issues):
+        from lp2jira.utils import json_dump
+        with open(self.update_path, 'w') as f:
+            json_dump(updated_issues, f)
+
+    def normalize_datetimes(self, lp_datetime, jira_datetime):
+        lp_timestamp = int(dateutil.parser.parse(lp_datetime).timestamp())
+        jira_timestamp = int(jira_datetime / 1e3)
+        return lp_timestamp, jira_timestamp
+
+    def should_update(self, lp_issue, jira_issue):
+        if 'updated' not in lp_issue:
+            return False
+
+        lp_raw_date = lp_issue['updated']
+        jira_raw_date = jira_issue['updated']
+        lp_updated, jira_updated = self.normalize_datetimes(lp_raw_date,
+                                                            jira_raw_date)
+        return lp_updated > jira_updated
+
+    def add_new(self, old, new):
+        for i in new:
+            if i not in old:
+                old.append(i)
+
+    def clear_comments(self, lp_comments, jira_comments):
+        cleared_comments = []
+        for comment in lp_comments:
+            if not self.has_comment(jira_comments, comment):
+                cleared_comments.append(comment)
+        return cleared_comments
+
+    def has_comment(self, jira_comments, lp_comment):
+        for comment in jira_comments:
+            lp_created, jira_created = self.normalize_datetimes(lp_comment['created'],
+                                                                comment['created'])
+            if not 'body' in comment:
+                return True
+            if comment['body'] == lp_comment['body'] and lp_created == jira_created:
+                return True
+        return False
+    
+    def clear_history(self, lp_history, jira_history):
+        cleared_history = []
+        for record in lp_history:
+            if not self.has_record(jira_history, record):
+                cleared_history.append(record)
+        return cleared_history
+
+    def has_record(self, jira_history, lp_record):
+        for record in jira_history:
+            lp_created, jira_created = self.normalize_datetimes(lp_record['created'],
+                                                                record['created'])
+            if record['author'] == lp_record['author'] and lp_created == jira_created:
+                return True
+        return False
+
+    def find_correct_issue(self, jira_search_result, externalId):
+        for issue in jira_search_result['issues']:
+            full_jira_issue = self.get_full_jira_issue(issue['key'])
+            for custom_field in full_jira_issue['projects'][0]['issues'][0]['customFieldValues']:
+                    if custom_field['value'] == externalId:
+                        return full_jira_issue
+
+    def search_jira_for_issue(self, external_id):
+        url = f'{self.server}/rest/api/2/search?jql=cf[{self.id_cf_number}]~{external_id}'
+        return requests.get(url, auth=(self.username, self.password)).json()
+    
+    def get_full_jira_issue(self, issue_key):
+        url = f'{self.server}/si/com.atlassian.jira.plugins.jira-importers-plugin:issue-json/{issue_key}/{issue_key}.json'
+        return requests.get(url, auth=(self.username, self.password)).json()

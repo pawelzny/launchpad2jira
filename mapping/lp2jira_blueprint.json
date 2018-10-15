@@ -1,75 +1,66 @@
 [
   {
     "conditions": {
-      "definition_status": "Not started"
+      "is_started": true,
+      "implementation_status": "Implemented"
     },
-    "status": "New"
-  },
-  {
-    "conditions": {
-      "definition_status": "Drafting"
-    },
-    "status": "Drafting"
-  },
-  {
-    "conditions": {
-      "definition_status": "Discussion"
-    },
-    "status": "Discussion"
-  },
-  {
-    "conditions": {
-      "definition_status": "Superseded"
-    },
-    "status": "Closed"
-  },
-  {
-    "conditions": {
-      "definition_status": "Obsolete"
-    },
-    "status": "Closed"
+    "status": "Fix Committed"
   },
   {
     "conditions": {
       "is_started": true,
-      "is_complete": false,
-      "definition_status": "Review"
-    },
-    "status": "Review"
-  },
-  {
-    "conditions": {
-      "is_started": true,
-      "is_complete": false,
-      "definition_status": "Pending Approval"
-    },
-    "status": "Pending Approval"
-  },
-  {
-    "conditions": {
-      "is_started": true,
-      "is_complete": false,
-      "direction_approved": false,
-      "definition_status": "Approved"
-    },
-    "status": "Needs direction approval"
-  },
-  {
-    "conditions": {
-      "is_started": true,
-      "is_complete": false,
-      "direction_approved": true,
-      "definition_status": "Approved"
+      "implementation_status": "Needs Code Review"
     },
     "status": "In Progress"
   },
   {
     "conditions": {
       "is_started": true,
-      "is_complete": true,
-      "direction_approved": true,
-      "definition_status": "Approved"
+      "implementation_status": "Started"
     },
-    "status": "Implemented"
+    "status": "In Progress"
+  },
+  {
+    "conditions": {
+      "is_started": true,
+      "implementation_status": "Good progress"
+    },
+    "status": "In Progress"
+  },
+  {
+    "conditions": {
+      "is_started": true,
+      "implementation_status": "Beta Available"
+    },
+    "status": "In Progress"
+  },
+  {
+    "conditions": {
+      "is_started": false,
+      "implementation_status": "Deferred"
+    },
+    "status": "Assigned"
+  },
+  {
+    "conditions": {
+      "is_started": true,
+      "implementation_status": "Slow progress"
+    },
+    "status": "In Progress"
+  },
+  {
+    "conditions": {
+      "is_started": false,
+      "is_complete": false,
+      "definition_status": "Approved",
+      "implementation_status": "Unknown"
+    },
+    "status": "Assigned"
+  },
+  {
+    "conditions": {
+      "is_started": false
+    },
+    "status": "Open"
   }
 ]
