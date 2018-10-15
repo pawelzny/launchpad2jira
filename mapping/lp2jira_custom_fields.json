@@ -1,14 +1,6 @@
 {
-  "has_accepted_goal": {
-    "fieldName": "Has accepted goal",
-    "fieldType": "com.atlassian.jira.plugin.system.customfieldtypes:boolean"
-  },
-  "direction_approved": {
-    "fieldName": "Direction Approved",
-    "fieldType": "com.atlassian.jira.plugin.system.customfieldtypes:boolean"
-  },
-  "implementation_status": {
-    "fieldName": "Implementation Status",
-    "fieldType": "com.atlassian.jira.plugin.system.customfieldtypes:string"
+  "id": {
+    "fieldName": "customfield_10010",
+    "fieldType": "com.atlassian.jira.plugin.system.customfieldtypes:textfield"
   }
 }

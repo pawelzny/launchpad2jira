@@ -1,15 +1,15 @@
 {
   "New": "Open",
   "Opinion": "Open",
-  "Confirmed": "In Progress",
+  "Confirmed": "Assigned",
   "In Progress": "In Progress",
-  "Triaged": "In Progress",
-  "Incomplete": "In Progress",
-  "Incomplete (with response)": "In Progress",
-  "Incomplete (without response)": "In Progress",
-  "Fix Committed": "Resolved",
-  "Fix Released": "Resolved",
+  "Triaged": "Assigned",
+  "Incomplete": "Assigned",
+  "Incomplete (with response)": "Assigned",
+  "Incomplete (without response)": "Assigned",
+  "Fix Committed": "Fix Committed",
+  "Fix Released": "Fix Verified",
   "Expired": "Closed",
-  "Won't Fix": "Closed",
-  "Invalid": "Closed"
+  "Won't Fix": "Won't Fix",
+  "Invalid": "Invalid"
 }
