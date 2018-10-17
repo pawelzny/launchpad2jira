@@ -37,6 +37,9 @@ class ExportCompile(Export):
         logging.info('===== Compile export file =====')
 
         export_bug = bug_template()
+        export_links = bug_template()
+
+
         for filename in tqdm(os.listdir(config['local']['issues']), desc='Compile issues'):
             with open(os.path.join(config['local']['issues'], filename), 'r') as f:
                 try:
@@ -46,7 +49,7 @@ class ExportCompile(Export):
                     continue
             export_bug['projects'][0]['issues'].extend(issue['projects'][0]['issues'])
             export_bug['projects'][0]['versions'].extend(issue['projects'][0]['versions'])
-            export_bug['links'].extend(issue['links'])
+            export_links['links'].extend(issue['links'])
 
         for filename in tqdm(os.listdir(config['local']['users']), desc='Compile users'):
             with open(os.path.join(config['local']['users'], filename), 'r') as f:
@@ -62,8 +65,13 @@ class ExportCompile(Export):
         logging.info(f'Compiled links: {len(export_bug["links"])}')
         logging.info(f'Compiled users: {len(export_bug["users"])}')
 
-        filename = os.path.join(config['local']['export'], config['jira']['filename'])
+        filename = os.path.join(config['local']['export'], config['jira']['issues'])
+        links_file = os.path.join(config['local']['export'], config['jira']['links'])
+
         with open(filename, 'w') as f:
             json_dump(export_bug, f)
+
+        with open(links_file, 'w') as f:
+            json_dump(export_links, f)
 
         logging.info(f'Exported data saved in: {filename}')
