@@ -361,12 +361,15 @@ class UpdateBugs:
 
         for index, lp_issue in enumerate(tqdm(lp_issues, desc="Update issues")):
             external_id = lp_issue['externalId']
-            try:
-                cf_id = external_id.split('/')[1]
-            except IndexError:
-                cf_id = external_id
 
-            jira_search_result = self.search_jira_for_issue(cf_id)
+            is_blueprint = lp_issue["issueType"] == "Story"
+
+            if is_blueprint or "/" not in external_id:
+                cf_id = external_id
+            else:
+                cf_id = external_id.split('/')[1]
+
+            jira_search_result = self.search_jira_for_issue(cf_id, is_blueprint)
 
             if not jira_search_result['issues']:
                 updated_issues['projects'][0]['issues'].append(lp_issue)
@@ -415,7 +418,7 @@ class UpdateBugs:
 
     def should_update(self, lp_issue, jira_issue):
         if 'updated' not in lp_issue:
-            return False
+            return True
 
         lp_raw_date = lp_issue['updated']
         jira_raw_date = jira_issue['updated']
@@ -467,8 +470,11 @@ class UpdateBugs:
                     if custom_field['value'] == externalId:
                         return full_jira_issue
 
-    def search_jira_for_issue(self, external_id):
-        url = f'{self.server}/rest/api/2/search?jql=cf[{self.id_cf_number}]~{external_id}'
+    def search_jira_for_issue(self, external_id, is_blueprint):
+        if is_blueprint:
+            url = f'{self.server}/rest/api/2/search?jql=text~{external_id}'
+        else:
+            url = f'{self.server}/rest/api/2/search?jql=cf[{self.id_cf_number}]~{external_id}'
         return requests.get(url, auth=(self.username, self.password)).json()
     
     def get_full_jira_issue(self, issue_key):
