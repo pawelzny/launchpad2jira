@@ -351,25 +351,18 @@ class UpdateBugs:
 
         with open(config['mapping']['custom_fields']) as f:
             mapping = json.load(f)
-            self.id_cf_number = mapping['id']['fieldName'].split('_')[-1]                
+            self.id_cf_number = mapping['id']['fieldName'].split('_')[-1]
+
+        with open(self.json_path, 'r') as f:
+            self.lp_issues = json.load(f)['projects'][0]['issues']
 
     def run(self):
-        with open(self.json_path, 'r') as f:
-            lp_issues = json.load(f)['projects'][0]['issues']
-
         updated_issues = bug_template()
 
-        for index, lp_issue in enumerate(tqdm(lp_issues, desc="Update issues")):
+        for index, lp_issue in enumerate(tqdm(self.lp_issues, desc="Update issues")):
             external_id = lp_issue['externalId']
 
-            is_blueprint = lp_issue["issueType"] == "Story"
-
-            if is_blueprint or "/" not in external_id:
-                cf_id = external_id
-            else:
-                cf_id = external_id.split('/')[1]
-
-            jira_search_result = self.search_jira_for_issue(cf_id, is_blueprint)
+            jira_search_result = self.find_lp_issue_in_jira(lp_issue, external_id)
 
             if not jira_search_result['issues']:
                 updated_issues['projects'][0]['issues'].append(lp_issue)
@@ -405,6 +398,22 @@ class UpdateBugs:
             updated_issues['projects'][0]['issues'].append(jira_issue)
 
         self.export_update(updated_issues)
+
+    def verify_update(self):
+        failed_update = 0
+        for index, lp_issue in enumerate(tqdm(self.lp_issues, desc="Verify")):
+            external_id = lp_issue['externalId']
+            jira_search_result = self.find_lp_issue_in_jira(lp_issue, external_id)
+            if not jira_search_result['issues']:
+                print(f"Launchpad issue with externalID: {external_id} not found in Jira.")
+                failed_update += 1
+
+        if not failed_update:
+            print("Verify completed successfully! All tickets have been imported.")
+        else:
+            lp_issue_amount = len(self.lp_issues)
+            print(f"Verified {lp_issue_amount - failed_update} of {lp_issue_amount}.")
+            print(f"{failed_update} tickets could not be found in Jira.")
 
     def export_update(self, updated_issues):
         from lp2jira.utils import json_dump
@@ -462,6 +471,14 @@ class UpdateBugs:
             if record['author'] == lp_record['author'] and lp_created == jira_created:
                 return True
         return False
+
+    def find_lp_issue_in_jira(self, lp_issue, external_id):
+        is_blueprint = lp_issue["issueType"] == "Story"
+        if is_blueprint or "/" not in external_id:
+            cf_id = external_id
+        else:
+            cf_id = external_id.split('/')[1]
+        return self.search_jira_for_issue(cf_id, is_blueprint)
 
     def find_correct_issue(self, jira_search_result, externalId):
         for issue in jira_search_result['issues']:
