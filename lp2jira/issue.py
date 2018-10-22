@@ -4,8 +4,11 @@ import os
 import json
 import requests
 import dateutil.parser
+import re
 
 from tqdm import tqdm
+
+from bs4 import BeautifulSoup
 
 from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
@@ -14,7 +17,7 @@ from lp2jira.user import ExportUser, User
 from lp2jira.utils import (bug_id, bug_template, clean_id, convert_custom_field_type,
                            get_custom_fields, get_owner,
                            get_user_data_from_activity_changed, json_dump,
-                           translate_priority, translate_status)
+                           translate_priority, translate_status, translate_blueprint_status)
 
 
 def get_releases(project):
@@ -400,20 +403,48 @@ class UpdateBugs:
         self.export_update(updated_issues)
 
     def verify_update(self):
+        with open(config['mapping']['issue']) as f:
+            status_mapping = json.load(f)
+
+        msgs = []
         failed_update = 0
+        failed_status = 0
         for index, lp_issue in enumerate(tqdm(self.lp_issues, desc="Verify")):
             external_id = lp_issue['externalId']
             jira_search_result = self.find_lp_issue_in_jira(lp_issue, external_id)
             if not jira_search_result['issues']:
-                print(f"Launchpad issue with externalID: {external_id} not found in Jira.")
+                msgs.append(f"Launchpad issue with externalID: {external_id} not found in Jira.")
                 failed_update += 1
+            else:
+                full_jira_issue = self.find_correct_issue(jira_search_result, external_id)
+                lp_status = lp_issue['status']
+                try:
+                    translated_lp_status = status_mapping[lp_status]
+                except KeyError:
+                    if full_jira_issue['projects'][0]['issues'][0]['issueType'] == "Story":
+                        project = lp.projects[config['launchpad']['project']]
+                        spec = project.getSpecification(name=external_id)
+                        translated_lp_status = translate_blueprint_status(spec)
+                    else:
+                        translated_lp_status = lp_issue['status']
 
-        if not failed_update:
-            print("Verify completed successfully! All tickets have been imported.")
+                jira_status = full_jira_issue['projects'][0]['issues'][0]['status']
+                if translated_lp_status != jira_status:
+                    failed_status += 1
+                    msgs.append(f"Launchpad issue with externalID: {external_id} has incorrect status.")
+                    msgs.append(f"Original Launchpad status: {lp_status}, Jira status: {jira_status}.\n")
+        if not (failed_update or failed_status):
+            msgs.append("Verify completed successfully! All tickets have been imported. All statuses verified.")
         else:
             lp_issue_amount = len(self.lp_issues)
-            print(f"Verified {lp_issue_amount - failed_update} of {lp_issue_amount}.")
-            print(f"{failed_update} tickets could not be found in Jira.")
+            msgs.append(f"Verified {lp_issue_amount - failed_update - failed_status} of {lp_issue_amount}.")
+            if failed_update:
+                msgs.append(f"{failed_update} tickets could not be found in Jira.")
+            if failed_status:
+                msgs.append(f"{failed_status} ticket statuses could not be verified.")
+        log = '\n'.join(msgs)
+        print(log)
+        logging.info(f"Verify log:\n{log}")
 
     def export_update(self, updated_issues):
         from lp2jira.utils import json_dump

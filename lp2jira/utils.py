@@ -51,7 +51,7 @@ def translate_blueprint_status(spec):
 
                 result.append(value == spec_v)
             except AttributeError as exc:
-                logging.error(f'Blueprint do not have attribute: "{condition}"')
+                logging.error(f'Blueprint does not have attribute: "{condition}"')
                 logging.exception(exc)
         if all(result):
             return mapp['status']

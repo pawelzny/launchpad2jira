@@ -15,7 +15,9 @@ def main(export_bugs=True, export_blueprints=True, update_bugs=False, verify_upd
     from lp2jira.user import ExportSubscribers
 
     if verify_update:
+        logging.info('===== Verify start =====')
         UpdateBugs().verify_update()
+        logging.info('===== Verify complete =====')
     else:
         logging.info('===== Export start =====')
         ExportSubscribers().run()
@@ -28,7 +30,9 @@ def main(export_bugs=True, export_blueprints=True, update_bugs=False, verify_upd
         ExportCompile().run()
         logging.info('===== Export complete =====')
         if update_bugs:
+            logging.info('===== Update start =====')
             UpdateBugs().run()
+            logging.info('===== Update complete =====')
 
 
 if __name__ == '__main__':
@@ -65,7 +69,7 @@ if __name__ == '__main__':
             else:
                 main()
     except KeyboardInterrupt:
-        msg = "Export has been stopped by user"
+        msg = "Execution has been stopped by user"
         print(msg)
         logging.info(msg)
         sys.exit(0)
