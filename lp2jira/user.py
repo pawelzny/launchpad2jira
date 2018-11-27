@@ -19,15 +19,24 @@ class User:
 
     @classmethod
     def create(cls, username):
-        lp_user = lp.people[username]
+        try:
+            lp_user = lp.people[username]
 
-        if not lp_user.hide_email_addresses and lp_user.preferred_email_address:
-            email = lp_user.preferred_email_address.email
-        else:
+            display_name = lp_user.display_name
+            if not lp_user.hide_email_addresses and lp_user.preferred_email_address:
+                email = lp_user.preferred_email_address.email
+            else:
+                email = None
+        except Exception as exc:
+            logging.error(f"Failed to get user data for {username}")
+            logging.exception(exc)
+
+            display_name = username
             email = None
 
-        return cls(name=username, display_name=lp_user.display_name,
-                   email=email, user_groups=get_user_groups())
+        return cls(name=username, display_name=display_name,
+                    email=email, user_groups=get_user_groups())
+            
 
     @staticmethod
     def filename(username):
