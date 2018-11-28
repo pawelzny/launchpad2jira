@@ -10,7 +10,7 @@ from tqdm import tqdm
 from lp2jira.config import config, lp
 from lp2jira.export import Export
 from lp2jira.issue import Issue
-from lp2jira.utils import bug_template, json_dump, translate_blueprint_status
+from lp2jira.utils import bug_template, json_dump, translate_blueprint_status, clean_id
 
 
 class Blueprint(Issue):
@@ -25,7 +25,7 @@ class Blueprint(Issue):
         description = f'{spec.summary}\n\n{spec.whiteboard}\n\n{spec.workitems_text}'
         custom_fields = Issue.create_custom_fields(spec)
         # TODO: issue type can't be hardcoded
-        return cls(issue_id=name, status=status, owner=spec.owner, title=spec.title,
+        return cls(issue_id=name, status=status, owner=clean_id(spec.owner_link), title=spec.title,
                    desc=description, priority=spec.priority,
                    created=spec.date_created.isoformat(), tags=[],
                    assignee=spec.assignee, custom_fields=custom_fields, affected_versions=[])

@@ -28,8 +28,8 @@ class User:
             else:
                 email = None
         except Exception as exc:
-            logging.error(f"Failed to get user data for {username}")
-            logging.exception(exc)
+            logging.warning(f"Failed to get user data for {username}")
+            logging.warning(exc, exc_info=True)
 
             display_name = username
             email = None

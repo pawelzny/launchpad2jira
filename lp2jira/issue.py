@@ -55,7 +55,7 @@ class Issue:
 
     def _export_related_users(self):
         try:
-            username = clean_id(self.owner.name)
+            username = clean_id(self.owner)
             if not User.exists(username):
                 self.export_user(username)
         except Exception as exc:
@@ -92,7 +92,7 @@ class Issue:
         issue = {
             'externalId': self.issue_id,
             'status': self.status,
-            'reporter': self.owner.name,
+            'reporter': clean_id(self.owner),
             'summary': self.title,
             'description': self.desc,
             'priority': self.priority,
@@ -145,7 +145,7 @@ class Bug(Issue):
         for activity in bug.activity:
             if activity.whatchanged == 'tags':
                 history.append({
-                    'author': get_owner(activity.person_link).name,
+                    'author': clean_id(activity.person_link),
                     'created': activity.datechanged.isoformat(),
                     'items': [{
                         'fieldType': 'jira',
@@ -167,7 +167,7 @@ class Bug(Issue):
                 new_display, new_name = get_user_data_from_activity_changed(activity.newvalue)
 
                 subtask_history[subtask_target].append({
-                    'author': get_owner(activity.person_link).name,
+                    'author': clean_id(activity.person_link),
                     'created': activity.datechanged.isoformat(),
                     'items': [{
                         'fieldType': 'jira',
@@ -188,7 +188,7 @@ class Bug(Issue):
 
                 sub_task = SubTask(issue_id=f'{bug_id(task)}/{len(sub_tasks) + 1}',
                                    status=translate_status(bug_task.status),
-                                   owner=bug_task.owner,
+                                   owner=clean_id(bug_task.owner_link),
                                    assignee=bug_task.assignee,
                                    title=f'[{bug_task.bug_target_name}] {bug_task.title}',
                                    desc=bug.description, priority=bug_task.importance,
@@ -218,7 +218,7 @@ class Bug(Issue):
         if task.milestone_link:
             fixed_versions.append(task.milestone.name)
 
-        return cls(issue_id=bug_id(task), status=translate_status(task.status), owner=bug.owner,
+        return cls(issue_id=bug_id(task), status=translate_status(task.status), owner=clean_id(bug.owner_link),
                    assignee=task.assignee, title=bug.title, desc=bug.description,
                    priority=task.importance, tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments,
@@ -271,7 +271,7 @@ class Bug(Issue):
 
         for sub_task in self.sub_tasks:
             try:
-                username = clean_id(sub_task.owner.name)
+                username = clean_id(sub_task.owner)
                 if not User.exists(username):
                     self.export_user(username)
             except Exception as exc:
