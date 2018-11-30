@@ -4,7 +4,6 @@ import os
 import re
 
 import requests
-from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from lp2jira.config import config, lp
@@ -17,15 +16,14 @@ class Blueprint(Issue):
     issue_type = config['mapping']['blueprint_type']
 
     @classmethod
-    def create(cls, name):
+    def create(cls, spec):
         project = lp.projects[config['launchpad']['project']]
-        spec = project.getSpecification(name=name)
 
         status = translate_blueprint_status(spec)
         description = f'{spec.summary}\n\n{spec.whiteboard}\n\n{spec.workitems_text}'
         custom_fields = Issue.create_custom_fields(spec)
         # TODO: issue type can't be hardcoded
-        return cls(issue_id=name, status=status, owner=clean_id(spec.owner_link), title=spec.title,
+        return cls(issue_id=spec.name, status=status, owner=clean_id(spec.owner_link), title=spec.title,
                    desc=description, priority=spec.priority,
                    created=spec.date_created.isoformat(), tags=[],
                    assignee=spec.assignee, custom_fields=custom_fields, affected_versions=[])
@@ -57,19 +55,16 @@ class ExportBlueprints(ExportBlueprint):
     def run(self):
         logging.info('===== Export: Blueprints =====')
 
-        url = f'https://blueprints.launchpad.net/{config["launchpad"]["project"]}/+specs?show=all'
-        res = requests.get(url)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        specs = soup.find_all(href=lambda x: x and re.compile('\+spec/').search(x))
-
+        project = lp.projects[config['launchpad']['project']]
+        specs = project.all_specifications
+        
         failed_specs = []
         counter = 0
         for index, spec in enumerate(tqdm(specs, desc='Export blueprints')):
-            name = spec.get('href').split('/')[-1]
-            if super().run(name=name):
+            if super().run(spec):
                 counter += 1
             else:
-                failed_specs.append(f'index: {index}, name: {name}')
+                failed_specs.append(f'index: {index}, name: {spec.name}')
 
         logging.info(f'Exported blueprints: {counter}/{len(specs)}')
         if failed_specs:
