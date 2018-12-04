@@ -132,3 +132,12 @@ def bug_id(bug_task, target_name=None):
         bug_id = f"{target_name[:3]}/{bug_task.id}"
 
     return bug_id.upper()
+
+def generate_mail(name):
+    name = name.lower()
+
+    splited_name = name.split(' ')
+    if len(splited_name) >= 2:
+        return f"{splited_name[0][0]}{splited_name[-1]}@juniper.net"
+    else:
+        return f"{name}@juniper.net"
