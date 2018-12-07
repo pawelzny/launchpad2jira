@@ -411,7 +411,7 @@ class UpdateBugs:
         failed_status = 0
         failed_unexpected = 0
         for index, lp_issue in enumerate(tqdm(self.lp_issues, desc="Verify")):
-                external_id = lp_issue['externalId']
+            external_id = lp_issue['externalId']
             try:
                 jira_search_result = self.find_lp_issue_in_jira(lp_issue, external_id)
                 if not jira_search_result['issues']:
