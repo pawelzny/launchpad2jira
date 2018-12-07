@@ -436,9 +436,9 @@ class UpdateBugs:
                         msgs.append(f"Launchpad issue with externalID: {external_id} has incorrect status.")
                         msgs.append(f"Original Launchpad status: {lp_status}, Jira status: {jira_status}.\n")
             except Exception as exc:
-                msgs.append(f"Exception raised when verify issue with externalID {externalID}.")
+                msgs.append(f"Exception raised when verify issue with externalID {external_id}.")
                 failed_unexpected += 0
-                logging.error(f"Exception raised when verify issue with externalID {externalID}.")
+                logging.error(f"Exception raised when verify issue with externalID {external_id}.")
                 info = getattr(exc, 'doc', None)
                 if info:
                     logging.error(f"Response being parsed by json: {info}")
