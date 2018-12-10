@@ -4,8 +4,11 @@ import os
 import json
 import requests
 import dateutil.parser
+import re
 
 from tqdm import tqdm
+
+from bs4 import BeautifulSoup
 
 from lp2jira.attachment import create_attachments
 from lp2jira.config import config, lp
@@ -14,7 +17,7 @@ from lp2jira.user import ExportUser, User
 from lp2jira.utils import (bug_id, bug_template, clean_id, convert_custom_field_type,
                            get_custom_fields, get_owner,
                            get_user_data_from_activity_changed, json_dump,
-                           translate_priority, translate_status)
+                           translate_priority, translate_status, translate_blueprint_status)
 
 
 def get_releases(project):
@@ -52,7 +55,7 @@ class Issue:
 
     def _export_related_users(self):
         try:
-            username = clean_id(self.owner.name)
+            username = clean_id(self.owner)
             if not User.exists(username):
                 self.export_user(username)
         except Exception as exc:
@@ -89,7 +92,7 @@ class Issue:
         issue = {
             'externalId': self.issue_id,
             'status': self.status,
-            'reporter': self.owner.name,
+            'reporter': clean_id(self.owner),
             'summary': self.title,
             'description': self.desc,
             'priority': self.priority,
@@ -142,7 +145,7 @@ class Bug(Issue):
         for activity in bug.activity:
             if activity.whatchanged == 'tags':
                 history.append({
-                    'author': get_owner(activity.person_link).name,
+                    'author': clean_id(activity.person_link),
                     'created': activity.datechanged.isoformat(),
                     'items': [{
                         'fieldType': 'jira',
@@ -164,7 +167,7 @@ class Bug(Issue):
                 new_display, new_name = get_user_data_from_activity_changed(activity.newvalue)
 
                 subtask_history[subtask_target].append({
-                    'author': get_owner(activity.person_link).name,
+                    'author': clean_id(activity.person_link),
                     'created': activity.datechanged.isoformat(),
                     'items': [{
                         'fieldType': 'jira',
@@ -185,7 +188,7 @@ class Bug(Issue):
 
                 sub_task = SubTask(issue_id=f'{bug_id(task)}/{len(sub_tasks) + 1}',
                                    status=translate_status(bug_task.status),
-                                   owner=bug_task.owner,
+                                   owner=clean_id(bug_task.owner_link),
                                    assignee=bug_task.assignee,
                                    title=f'[{bug_task.bug_target_name}] {bug_task.title}',
                                    desc=bug.description, priority=bug_task.importance,
@@ -215,7 +218,7 @@ class Bug(Issue):
         if task.milestone_link:
             fixed_versions.append(task.milestone.name)
 
-        return cls(issue_id=bug_id(task), status=translate_status(task.status), owner=bug.owner,
+        return cls(issue_id=bug_id(task), status=translate_status(task.status), owner=clean_id(bug.owner_link),
                    assignee=task.assignee, title=bug.title, desc=bug.description,
                    priority=task.importance, tags=tags, created=task.date_created.isoformat(),
                    updated=bug.date_last_updated.isoformat(), comments=comments,
@@ -268,7 +271,7 @@ class Bug(Issue):
 
         for sub_task in self.sub_tasks:
             try:
-                username = clean_id(sub_task.owner.name)
+                username = clean_id(sub_task.owner)
                 if not User.exists(username):
                     self.export_user(username)
             except Exception as exc:
@@ -346,99 +349,140 @@ class UpdateBugs:
         self.username = config['jira']['username']
         self.password = config['jira']['password']
         self.server = config['jira']['server']
+        self.json_path = os.path.join(config['local']['export'], config['jira']['issues'])
+        self.update_path = os.path.join(config['local']['export'], config['jira']['update'])
 
         with open(config['mapping']['custom_fields']) as f:
             mapping = json.load(f)
-            self.id_cf_number = mapping['id']['fieldName'].split('_')[-1]                
+            self.id_cf_number = mapping['id']['fieldName'].split('_')[-1]
+
+        with open(self.json_path, 'r') as f:
+            self.lp_issues = json.load(f)['projects'][0]['issues']
 
     def run(self):
-        json_path = os.path.join(config['local']['export'], config['jira']['filename'])
-        update_path = os.path.join(config['local']['export'], 'update.json')
+        updated_issues = bug_template()
 
-        with open(json_path, 'r') as f:
-            issues = json.load(f)['projects'][0]['issues']
+        for index, lp_issue in enumerate(tqdm(self.lp_issues, desc="Update issues")):
+            external_id = lp_issue['externalId']
 
-        updated_issues = {}
-        issues_not_existing_on_jira = []
+            jira_search_result = self.find_lp_issue_in_jira(lp_issue, external_id)
 
-        for issue in issues:
-            external_id = issue['externalId']
-            cf_id = external_id.split('/')[1]
-
-            issue_json = self.get_issue(cf_id)
-
-            if not issue_json['issues']:
-                issues_not_existing_on_jira.append(issue)
+            if not jira_search_result['issues']:
+                updated_issues['projects'][0]['issues'].append(lp_issue)
                 continue
 
-            full_jira_issue = self.find_correct_issue(issue_json, external_id)
-            jira_issue = full_jira_issue['projects'][0]['issues'][0]
+            full_jira_issue = self.find_correct_issue(jira_search_result, external_id)
+            jira_project = full_jira_issue['projects'][0]
+            jira_issue = jira_project['issues'][0]
 
-            if updated_issues:
-                jira_issue_versions = full_jira_issue['projects'][0]['versions']
-                # This step may be redundant as version is a parameter of the whole project (all issues (probably) have the same value here).
-                self.consolidate_versions(updated_issues['projects'][0]['versions'], jira_issue_versions)
-                # This step may be redundant as user cannot be imported as active. This must be changed manually from JIRA admin dashboard after import.
-                self.consolidate_users(updated_issues['users'], full_jira_issue['users'])
 
-            if  ('updated' in issue and 
-                  not self.should_update(issue['updated'], jira_issue['updated'])):
+            self.add_new(updated_issues['projects'][0]['versions'], jira_project['versions'])
+            self.add_new(updated_issues['users'], full_jira_issue['users'])
+
+            if not self.should_update(lp_issue, jira_issue):
                 continue
-
 
             for key, value in jira_issue.items():
-                if key == 'key':
+                if key not in lp_issue:
                     continue
-                
-                try:
-                    if isinstance(value, list):
-                        if key == 'comments':
-                            jira_issue[key] = self.clear_comments(issue[key],
-                                                                  jira_issue[key])
-                        elif key == 'history':
-                            jira_issue[key] = self.clear_history(issue[key],
-                                                                 jira_issue[key])
-                        else:
-                            jira_issue[key] = issue[key]    
+
+                if isinstance(value, list):
+                    if key == 'comments':
+                        jira_issue[key] = self.clear_comments(lp_issue[key],
+                                                              jira_issue[key])
+                    elif key == 'history':
+                        jira_issue[key] = self.clear_history(lp_issue[key],
+                                                             jira_issue[key])
                     else:
-                        jira_issue[key] = issue[key]
-                except KeyError:
-                    print('Does not contain key')
-            
+                        jira_issue[key] = lp_issue[key]
+                else:
+                    jira_issue[key] = lp_issue[key]
 
-            full_jira_issue['projects'][0]['issues'][0] = jira_issue
+            updated_issues['projects'][0]['issues'].append(jira_issue)
 
-            if not updated_issues:
-                updated_issues = full_jira_issue
-            else:
-                updated_issues['projects'][0]['issues'].append(jira_issue)
+        self.export_update(updated_issues)
 
-        updated_issues['projects'][0]['issues'].extend(issues_not_existing_on_jira)
+    def verify_update(self):
+        with open(config['mapping']['issue']) as f:
+            status_mapping = json.load(f)
 
+        msgs = []
+        failed_update = 0
+        failed_status = 0
+        failed_unexpected = 0
+        for index, lp_issue in enumerate(tqdm(self.lp_issues, desc="Verify")):
+            external_id = lp_issue['externalId']
+            try:
+                jira_search_result = self.find_lp_issue_in_jira(lp_issue, external_id)
+                if not jira_search_result['issues']:
+                    msgs.append(f"Launchpad issue with externalID: {external_id} not found in Jira.")
+                    failed_update += 1
+                else:
+                    full_jira_issue = self.find_correct_issue(jira_search_result, external_id)
+                    lp_status = lp_issue['status']
+                    try:
+                        translated_lp_status = status_mapping[lp_status]
+                    except KeyError:
+                        if full_jira_issue['projects'][0]['issues'][0]['issueType'] == "Story":
+                            project = lp.projects[config['launchpad']['project']]
+                            spec = project.getSpecification(name=external_id)
+                            translated_lp_status = translate_blueprint_status(spec)
+                        else:
+                            translated_lp_status = lp_issue['status']
+
+                    jira_status = full_jira_issue['projects'][0]['issues'][0]['status']
+                    if translated_lp_status != jira_status:
+                        failed_status += 1
+                        msgs.append(f"Launchpad issue with externalID: {external_id} has incorrect status.")
+                        msgs.append(f"Original Launchpad status: {lp_status}, Jira status: {jira_status}.\n")
+            except Exception as exc:
+                msgs.append(f"Exception raised when verify issue with externalID {external_id}.")
+                failed_unexpected += 0
+                logging.error(f"Exception raised when verify issue with externalID {external_id}.")
+                info = getattr(exc, 'doc', None)
+                if info:
+                    logging.error(f"Response being parsed by json: {info}")
+                logging.exception(exc)
+
+        if not (failed_update or failed_status or failed_unexpected):
+            msgs.append("Verify completed successfully! All tickets have been imported. All statuses verified.")
+        else:
+            lp_issue_amount = len(self.lp_issues)
+            msgs.append(f"Verified {lp_issue_amount - failed_update - failed_status - failed_unexpected} of {lp_issue_amount}.")
+            if failed_update:
+                msgs.append(f"{failed_update} tickets could not be found in Jira.")
+            if failed_status:
+                msgs.append(f"{failed_status} ticket statuses could not be verified.")
+            if failed_unexpected:
+                msgs.append(f"{failed_unexpected} exception raised when try to verify.")
+        log = '\n'.join(msgs)
+        print(log)
+        logging.info(f"Verify log:\n{log}")
+
+    def export_update(self, updated_issues):
         from lp2jira.utils import json_dump
-        with open(update_path, 'w') as f:
+        with open(self.update_path, 'w') as f:
             json_dump(updated_issues, f)
-        
 
     def normalize_datetimes(self, lp_datetime, jira_datetime):
         lp_timestamp = int(dateutil.parser.parse(lp_datetime).timestamp())
         jira_timestamp = int(jira_datetime / 1e3)
         return lp_timestamp, jira_timestamp
 
-    def should_update(self, lp_raw_date, jira_raw_date):
+    def should_update(self, lp_issue, jira_issue):
+        if 'updated' not in lp_issue:
+            return True
+
+        lp_raw_date = lp_issue['updated']
+        jira_raw_date = jira_issue['updated']
         lp_updated, jira_updated = self.normalize_datetimes(lp_raw_date,
                                                             jira_raw_date)
         return lp_updated > jira_updated
 
-    def consolidate_users(self, oldv, newv):
-        for v in newv:
-            if v not in oldv:
-                oldv.append(v)
-
-    def consolidate_versions(self, oldv, newv):
-        for v in newv:
-            if v not in oldv:
-                oldv.append(v)
+    def add_new(self, old, new):
+        for i in new:
+            if i not in old:
+                old.append(i)
 
     def clear_comments(self, lp_comments, jira_comments):
         cleared_comments = []
@@ -472,17 +516,28 @@ class UpdateBugs:
                 return True
         return False
 
-    def find_correct_issue(self, issues_json, externalId):
-        for issue in issues_json['issues']:
-            full_jira_issue = self.get_issue_file(issue['key']).json()
+    def find_lp_issue_in_jira(self, lp_issue, external_id):
+        is_blueprint = lp_issue["issueType"] == "Story"
+        if is_blueprint or "/" not in external_id:
+            cf_id = external_id
+        else:
+            cf_id = external_id.split('/')[1]
+        return self.search_jira_for_issue(cf_id, is_blueprint)
+
+    def find_correct_issue(self, jira_search_result, externalId):
+        for issue in jira_search_result['issues']:
+            full_jira_issue = self.get_full_jira_issue(issue['key'])
             for custom_field in full_jira_issue['projects'][0]['issues'][0]['customFieldValues']:
                     if custom_field['value'] == externalId:
                         return full_jira_issue
 
-    def get_issue(self, external_id):
-        url = f'{self.server}/rest/api/2/search?jql=cf[{self.id_cf_number}]~{external_id}'
+    def search_jira_for_issue(self, external_id, is_blueprint):
+        if is_blueprint:
+            url = f'{self.server}/rest/api/2/search?jql=text~{external_id}'
+        else:
+            url = f'{self.server}/rest/api/2/search?jql=cf[{self.id_cf_number}]~{external_id}'
         return requests.get(url, auth=(self.username, self.password)).json()
     
-    def get_issue_file(self, issue_key):
+    def get_full_jira_issue(self, issue_key):
         url = f'{self.server}/si/com.atlassian.jira.plugins.jira-importers-plugin:issue-json/{issue_key}/{issue_key}.json'
-        return requests.get(url, auth=(self.username, self.password))
+        return requests.get(url, auth=(self.username, self.password)).json()

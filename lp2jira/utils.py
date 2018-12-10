@@ -51,7 +51,7 @@ def translate_blueprint_status(spec):
 
                 result.append(value == spec_v)
             except AttributeError as exc:
-                logging.error(f'Blueprint do not have attribute: "{condition}"')
+                logging.error(f'Blueprint does not have attribute: "{condition}"')
                 logging.exception(exc)
         if all(result):
             return mapp['status']
@@ -117,8 +117,12 @@ def get_user_data_from_activity_changed(value):
     if value is None:
         return '', None
 
-    user_data = value.rsplit(' (', 1)
-    return user_data[0], user_data[1][:-1]
+    if ' (' in value:
+        user_data = value.rsplit(' (', 1)
+        return user_data[0], user_data[1][:-1]
+    # case: bugs with subtask from other projects, where value like 'gnome'
+    else: 
+        return value, value
 
 
 def bug_id(bug_task, target_name=None):
@@ -128,3 +132,12 @@ def bug_id(bug_task, target_name=None):
         bug_id = f"{target_name[:3]}/{bug_task.id}"
 
     return bug_id.upper()
+
+def generate_mail(name):
+    name = name.lower()
+
+    splited_name = name.split(' ')
+    if len(splited_name) >= 2:
+        return f"{splited_name[0][0]}{splited_name[-1]}@juniper.net"
+    else:
+        return f"{name}@juniper.net"

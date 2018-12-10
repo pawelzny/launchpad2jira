@@ -20,13 +20,12 @@ class Export:
     def run(self, *args, **kwargs):
         try:
             entity = self.entity.create(*args, **kwargs)
+            entity.export()
+            return True
         except Exception as exc:
             logging.error(f'{self.entity.__name__} export failed for {args} {kwargs}')
             logging.exception(exc)
             return False
-        else:
-            entity.export()
-            return True
 
 
 class ExportCompile(Export):

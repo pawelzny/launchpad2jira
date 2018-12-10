@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from lp2jira.config import config, lp
 from lp2jira.export import Export
-from lp2jira.utils import clean_id, get_user_groups, json_dump
+from lp2jira.utils import clean_id, get_user_groups, json_dump, generate_mail
 
 
 class User:
@@ -19,15 +19,25 @@ class User:
 
     @classmethod
     def create(cls, username):
-        lp_user = lp.people[username]
+        try:
+            lp_user = lp.people[username]
 
-        if not lp_user.hide_email_addresses and lp_user.preferred_email_address:
-            email = lp_user.preferred_email_address.email
-        else:
-            email = None
+            display_name = lp_user.display_name
+            if not lp_user.hide_email_addresses and lp_user.preferred_email_address:
+                email = lp_user.preferred_email_address.email
+            else:
+                email = generate_mail(display_name)
+                logging.warning(f"No access to mail for {username}. Auto-generated email: {email}")
+        except Exception as exc:
+            logging.warning(f"Failed to get user data for {username}")
+            logging.warning(exc, exc_info=True)
 
-        return cls(name=username, display_name=lp_user.display_name,
-                   email=email, user_groups=get_user_groups())
+            display_name = username
+            email = generate_mail(display_name)
+
+        return cls(name=username, display_name=display_name,
+                    email=email, user_groups=get_user_groups())
+            
 
     @staticmethod
     def filename(username):
